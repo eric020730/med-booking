@@ -85,7 +85,7 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzDFD06Z0p5Q0ppNoZeLNJBuEqB5jDKDBXk5b96TD3WcZ0JZgGLPBuSwavZ-kMVlAxp/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx9lIzHt9rK-NMaB6XoVH-snuzsxGkGqezFzN_SgVMAjALr_CLjj1cq2tu38PugyeP3/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
         let state = { userId: null, name: '', course: null, date: null, allEvents: [], currentAction: null };
 
@@ -203,7 +203,7 @@
         }
 
         async function submitBooking(startTime) {
-            if (!confirm(`確定預約於 ${startTime.replace('T',' ')} 進行課程嗎？`)) return;
+            if (!confirm(`確定預約於 ${startTime.replace('T', ' ')} 進行課程嗎？`)) return;
             document.getElementById('loading').classList.remove('hidden');
             const params = new URLSearchParams({ 
                 action: 'submitBooking', 
@@ -258,7 +258,13 @@
         async function cancelBooking(eventId, isReschedule = false) {
             if (!confirm(isReschedule ? '更改時間需先取消原預約，確定繼續？' : '確定要取消這堂課嗎？')) return;
             document.getElementById('loading').classList.remove('hidden');
-            const res = await fetch(`${GAS_URL}?action=cancelBooking&eventId=${eventId}`);
+            const params = new URLSearchParams({ 
+                action: 'cancelBooking', 
+                eventId: eventId,
+                userId: state.userId,
+                isReschedule: isReschedule
+            });
+            const res = await fetch(`${GAS_URL}?${params.toString()}`);
             if ((await res.json()).status === 'success') {
                 if (isReschedule) {
                     window.location.search = '?action=book';

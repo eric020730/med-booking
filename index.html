@@ -6,66 +6,88 @@
     <title>醫影部教學預約</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .dot { height: 4px; width: 4px; background-color: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 2px; }
+    </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
-    <div id="app" class="max-w-md mx-auto p-4">
-        <!-- 狀態顯示 -->
-        <div id="loading" class="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
+    <div id="app" class="max-w-md mx-auto p-4 pb-20">
+        <!-- 載入中動畫 -->
+        <div id="loading" class="fixed inset-0 bg-white/90 flex items-center justify-center z-50">
             <div class="text-center">
-                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-                <p class="mt-2 text-slate-500 text-sm">資料讀取中...</p>
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p class="mt-4 text-slate-500 font-medium">同步日曆資料中...</p>
             </div>
         </div>
 
-        <!-- 頁面容器 -->
         <div id="page-content" class="hidden">
-            <!-- 預約模式 -->
-            <div id="view-book" class="hidden">
+            <!-- 視圖：預約與查詢課表 (月曆視圖) -->
+            <div id="view-calendar" class="hidden">
                 <div class="bg-white rounded-3xl p-6 shadow-sm mb-4">
-                    <h1 class="text-xl font-bold text-slate-800">預約新課程</h1>
-                    <p id="user-info-book" class="text-blue-600 text-sm font-bold mt-1"></p>
+                    <h1 id="calendar-title" class="text-xl font-bold text-slate-800">全體課表查詢</h1>
+                    <p id="user-info-cal" class="text-blue-600 text-sm font-bold mt-1"></p>
                 </div>
-                <div class="bg-white rounded-3xl p-6 shadow-sm mb-4">
-                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">1. 選擇課程</h2>
+
+                <!-- 預約模式專用：選擇課程 -->
+                <div id="course-section" class="bg-white rounded-3xl p-6 shadow-sm mb-4 hidden">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">1. 選擇預約主題</h2>
                     <div id="course-list" class="space-y-2"></div>
                 </div>
-                <div id="step-calendar" class="bg-white rounded-3xl p-6 shadow-sm mb-4 opacity-30 pointer-events-none">
-                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">2. 選擇日期 (藍色為可預約)</h2>
+
+                <!-- 月曆本體 -->
+                <div id="calendar-container" class="bg-white rounded-3xl p-6 shadow-sm mb-4">
+                    <h2 id="calendar-step-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">全體排課狀況</h2>
                     <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
-                    <div id="day-detail" class="mt-4 pt-4 border-t border-slate-100 hidden">
-                        <p id="selected-date-text" class="text-sm font-bold text-slate-700 mb-2"></p>
-                        <div id="time-slots" class="grid grid-cols-2 gap-2"></div>
+                    
+                    <!-- 日期點選後的明細 -->
+                    <div id="day-detail" class="mt-6 pt-6 border-t border-slate-100 hidden">
+                        <p id="selected-date-text" class="text-sm font-black text-slate-700 mb-4"></p>
+                        <div id="time-slots" class="grid grid-cols-1 gap-2"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- 查詢/更改模式 -->
+            <!-- 視圖：更改時間 (個人紀錄清單) -->
             <div id="view-modify" class="hidden">
                 <div class="bg-white rounded-3xl p-6 shadow-sm mb-4 text-center">
-                    <h1 id="view-title" class="text-xl font-bold text-slate-800">預約紀錄管理</h1>
+                    <h1 class="text-xl font-bold text-slate-800">更改預約時間</h1>
                     <p id="user-info-modify" class="text-blue-600 text-sm font-bold mt-1"></p>
+                    <p class="text-slate-400 text-xs mt-2 italic">點擊下方紀錄進行更動</p>
                 </div>
                 <div id="record-list" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
-    <!-- 成功彈窗 -->
+    <!-- 互動選單 Modal -->
+    <div id="action-modal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-[40px] p-8 w-full max-w-xs text-center shadow-2xl">
+            <h3 class="text-lg font-bold mb-2">管理預約</h3>
+            <p id="action-target" class="text-slate-500 text-sm mb-6"></p>
+            <div class="space-y-3">
+                <button id="btn-reschedule" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200">更改時間</button>
+                <button id="btn-cancel" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-bold">取消上課</button>
+                <button onclick="closeModal()" class="w-full text-slate-400 py-2 text-sm">暫不更動</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功提示彈窗 -->
     <div id="success-modal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-[40px] p-10 w-full max-w-xs text-center shadow-2xl">
-            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path></svg>
             </div>
             <h3 class="text-xl font-black mb-2">提交成功</h3>
-            <p id="success-msg" class="text-slate-500 mb-6 text-sm">請查看 LINE 訊息確認詳情。</p>
-            <button onclick="liff.closeWindow()" class="w-full bg-slate-900 text-white py-3 rounded-2xl font-bold">返回 LINE</button>
+            <p id="success-msg" class="text-slate-500 mb-8 text-sm leading-relaxed">預約資訊已更新。<br>請查看 LINE 通知。</p>
+            <button onclick="liff.closeWindow()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">返回 LINE</button>
         </div>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzrfmN7wy6Ttrzjr6SYeOMZGlStRqmRU6zyztvLQ80PXTTHQEsHFWIeBbB6EEuCDV-M/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzDFD06Z0p5Q0ppNoZeLNJBuEqB5jDKDBXk5b96TD3WcZ0JZgGLPBuSwavZ-kMVlAxp/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
-        let state = { userId: null, name: '', course: null, date: null, allEvents: [] };
+        let state = { userId: null, name: '', course: null, date: null, allEvents: [], currentAction: null };
 
         async function init() {
             await liff.init({ liffId: LIFF_ID });
@@ -74,7 +96,7 @@
             state.userId = profile.userId;
 
             const urlParams = new URLSearchParams(window.location.search);
-            const action = urlParams.get('action');
+            state.currentAction = urlParams.get('action');
 
             // 抓取全域資料
             const [userRes, eventRes] = await Promise.all([
@@ -85,86 +107,107 @@
             state.allEvents = await eventRes.json();
             state.name = userData.name;
 
-            if (action === 'query' || action === 'modify') {
-                renderModifyView(action === 'modify');
+            if (state.currentAction === 'modify') {
+                renderModifyView();
             } else {
-                renderBookView(userData);
+                renderCalendarView(userData, state.currentAction === 'book');
             }
             
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('page-content').classList.remove('hidden');
         }
 
-        function renderBookView(data) {
-            document.getElementById('view-book').classList.remove('hidden');
-            document.getElementById('user-info-book').textContent = `${data.name} 醫師`;
-            const list = document.getElementById('course-list');
-            data.courses.forEach(c => {
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left p-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:border-blue-500 transition-all";
-                btn.textContent = c;
-                btn.onclick = () => {
-                    state.course = c;
-                    document.getElementById('step-calendar').classList.remove('opacity-30', 'pointer-events-none');
-                    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.replace('border-blue-500', 'border-slate-100'));
-                    btn.classList.replace('border-slate-100', 'border-blue-500');
-                };
-                list.appendChild(btn);
-            });
-            renderCalendar();
+        function renderCalendarView(data, isBookMode) {
+            document.getElementById('view-calendar').classList.remove('hidden');
+            document.getElementById('calendar-title').textContent = isBookMode ? "預約新課程" : "全體課表查詢";
+            document.getElementById('user-info-cal').textContent = `${data.name} 醫師`;
+            
+            if (isBookMode) {
+                document.getElementById('course-section').classList.remove('hidden');
+                document.getElementById('calendar-step-text').textContent = "2. 選擇上課日期";
+                const list = document.getElementById('course-list');
+                data.courses.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 transition-all";
+                    btn.textContent = c;
+                    btn.onclick = () => {
+                        state.course = c;
+                        document.getElementById('calendar-container').classList.remove('opacity-30', 'pointer-events-none');
+                        list.querySelectorAll('button').forEach(b => b.classList.replace('border-blue-500', 'border-slate-100'));
+                        btn.classList.replace('border-slate-100', 'border-blue-500');
+                    };
+                    list.appendChild(btn);
+                });
+                document.getElementById('calendar-container').classList.add('opacity-30', 'pointer-events-none');
+            }
+
+            renderCalendar(isBookMode);
         }
 
-        function renderCalendar() {
+        function renderCalendar(isBookMode) {
             const container = document.getElementById('calendar');
+            container.innerHTML = '';
             const weeks = ['日','一','二','三','四','五','六'];
             weeks.forEach(w => container.innerHTML += `<div class="text-slate-300 font-bold py-2">${w}</div>`);
             
             const today = new Date();
             for (let i = 0; i < 30; i++) {
                 const d = new Date(); d.setDate(today.getDate() + i);
-                if (d.getDay() === 0 || d.getDay() === 6) continue;
-                
                 const dateStr = d.toISOString().split('T')[0];
                 const dayEvents = state.allEvents.filter(e => e.start.startsWith(dateStr));
                 
                 const el = document.createElement('div');
-                el.className = `py-3 rounded-xl font-bold transition-all cursor-pointer ${dayEvents.length >= 7 ? 'bg-slate-100 text-slate-300' : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white'}`;
-                el.textContent = d.getDate();
-                el.onclick = () => selectDate(dateStr, el, dayEvents);
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                
+                el.className = `py-3 rounded-xl font-bold transition-all relative ${isWeekend ? 'text-slate-200' : 'cursor-pointer hover:bg-slate-100'}`;
+                el.innerHTML = `<span>${d.getDate()}</span>`;
+                
+                if (dayEvents.length > 0 && !isWeekend) {
+                    el.innerHTML += `<div class="flex justify-center gap-0.5 mt-0.5">${dayEvents.map(() => '<span class="dot"></span>').join('')}</div>`;
+                }
+
+                if (!isWeekend) {
+                    el.onclick = () => selectDate(dateStr, el, dayEvents, isBookMode);
+                }
                 container.appendChild(el);
             }
         }
 
-        function selectDate(dateStr, el, events) {
+        function selectDate(dateStr, el, events, isBookMode) {
             state.date = dateStr;
             document.querySelectorAll('#calendar div').forEach(d => d.classList.remove('bg-blue-600', 'text-white'));
-            if (el.classList.contains('bg-blue-50')) el.classList.add('bg-blue-600', 'text-white');
+            el.classList.add('bg-blue-600', 'text-white');
             
-            document.getElementById('day-detail').classList.remove('hidden');
-            document.getElementById('selected-date-text').textContent = dateStr + " 時段預覽";
+            const detail = document.getElementById('day-detail');
+            detail.classList.remove('hidden');
+            document.getElementById('selected-date-text').textContent = dateStr + " 排課狀況";
             
             const tc = document.getElementById('time-slots');
             tc.innerHTML = '';
             const hours = [9, 10, 11, 13, 14, 15, 16];
             
             hours.forEach(h => {
-                const isBooked = events.find(e => new Date(e.start).getHours() === h);
+                const booked = events.find(e => new Date(e.start).getHours() === h);
                 const btn = document.createElement('button');
-                btn.className = `p-3 rounded-xl text-xs font-bold border-2 transition-all ${isBooked ? 'bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed' : 'border-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white'}`;
-                btn.innerHTML = `${h}:00<br>${isBooked ? '已被預約' : '可預約'}`;
-                if (!isBooked) btn.onclick = () => submit(dateStr + 'T' + String(h).padStart(2,'0') + ':00:00');
+                
+                if (isBookMode) {
+                    btn.className = `w-full p-4 rounded-2xl text-sm font-bold border-2 flex justify-between items-center ${booked ? 'bg-slate-50 border-slate-100 text-slate-300' : 'border-blue-100 text-blue-600 hover:bg-blue-50'}`;
+                    btn.innerHTML = `<span>${h}:00 時段</span> <span>${booked ? booked.title : '點擊預約'}</span>`;
+                    if (!booked) btn.onclick = () => submitBooking(dateStr + 'T' + String(h).padStart(2,'0') + ':00:00');
+                } else {
+                    btn.className = `w-full p-4 rounded-2xl text-sm font-bold border-2 flex justify-between items-center ${booked ? 'border-slate-200 text-slate-700 bg-slate-50' : 'border-dashed border-slate-100 text-slate-300'}`;
+                    btn.innerHTML = `<span>${h}:00</span> <span>${booked ? booked.title : '尚未預約'}</span>`;
+                }
                 tc.appendChild(btn);
             });
         }
 
-        async function submit(startTime) {
-            if (!confirm(`確定預約 ${startTime.replace('T', ' ')} 的課程嗎？`)) return;
+        async function submitBooking(startTime) {
+            if (!confirm(`確定預約於 ${startTime.replace('T',' ')} 進行課程嗎？`)) return;
+            document.getElementById('loading').classList.remove('hidden');
             const params = new URLSearchParams({ 
                 action: 'submitBooking', 
-                name: state.name, 
-                course: state.course, 
-                startTime: startTime,
-                userId: state.userId
+                name: state.name, course: state.course, startTime: startTime, userId: state.userId
             });
             const res = await fetch(`${GAS_URL}?${params.toString()}`);
             if ((await res.json()).status === 'success') {
@@ -172,43 +215,61 @@
             }
         }
 
-        async function renderModifyView(isModify) {
+        async function renderModifyView() {
             document.getElementById('view-modify').classList.remove('hidden');
-            document.getElementById('view-title').textContent = isModify ? "更改/取消時間" : "我的預約課表";
             document.getElementById('user-info-modify').textContent = `${state.name} 醫師`;
-            
             const res = await fetch(`${GAS_URL}?action=getMyBookings&userId=${state.userId}`);
             const data = await res.json();
             const list = document.getElementById('record-list');
             list.innerHTML = '';
             
             if (data.length === 0) {
-                list.innerHTML = '<p class="text-center text-slate-400 py-10">尚無預約紀錄</p>';
+                list.innerHTML = '<p class="text-center text-slate-400 py-10">未來一個月尚無預約</p>';
                 return;
             }
 
             data.forEach(r => {
                 const d = new Date(r.time);
-                list.innerHTML += `
-                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-50 flex justify-between items-center">
-                        <div>
-                            <div class="text-slate-800 font-black">${r.course}</div>
-                            <div class="text-slate-400 text-xs mt-1 font-bold">${d.toLocaleDateString()} ${d.getHours()}:00</div>
-                        </div>
-                        ${isModify ? `<button onclick="cancel('${r.eventId}')" class="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-xs font-black">取消預約</button>` : ''}
+                const item = document.createElement('div');
+                item.className = "bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center active:scale-95 transition-transform cursor-pointer";
+                item.innerHTML = `
+                    <div>
+                        <div class="text-slate-800 font-black text-lg">${r.course}</div>
+                        <div class="text-blue-500 text-sm mt-1 font-bold">${d.toLocaleDateString()} ${d.getHours()}:00</div>
                     </div>
+                    <div class="text-slate-300">➔</div>
                 `;
+                item.onclick = () => openActionModal(r);
+                list.appendChild(item);
             });
         }
 
-        window.cancel = async (id) => {
-            if (!confirm('取消後需重新進行預約，確定嗎？')) return;
-            const res = await fetch(`${GAS_URL}?action=cancelBooking&eventId=${id}`);
+        function openActionModal(record) {
+            const modal = document.getElementById('action-modal');
+            document.getElementById('action-target').textContent = `${record.course} (${new Date(record.time).toLocaleDateString()})`;
+            modal.classList.replace('hidden', 'flex');
+            
+            document.getElementById('btn-cancel').onclick = () => cancelBooking(record.eventId);
+            document.getElementById('btn-reschedule').onclick = () => {
+                cancelBooking(record.eventId, true);
+            };
+        }
+
+        async function cancelBooking(eventId, isReschedule = false) {
+            if (!confirm(isReschedule ? '更改時間需先取消原預約，確定繼續？' : '確定要取消這堂課嗎？')) return;
+            document.getElementById('loading').classList.remove('hidden');
+            const res = await fetch(`${GAS_URL}?action=cancelBooking&eventId=${eventId}`);
             if ((await res.json()).status === 'success') {
-                document.getElementById('success-msg').textContent = '該筆預約已刪除。';
-                document.getElementById('success-modal').classList.replace('hidden', 'flex');
+                if (isReschedule) {
+                    window.location.search = '?action=book';
+                } else {
+                    document.getElementById('success-msg').textContent = '該筆預約已成功取消。';
+                    document.getElementById('success-modal').classList.replace('hidden', 'flex');
+                }
             }
         }
+
+        function closeModal() { document.getElementById('action-modal').classList.replace('flex', 'hidden'); }
 
         window.onload = init;
     </script>

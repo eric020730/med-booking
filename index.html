@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>醫影部教學預約</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <div id="app" class="max-w-md mx-auto p-4">
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-4 text-center">
+            <h1 class="text-xl font-bold text-slate-800">醫學影像部 課程預約</h1>
+            <p id="user-welcome" class="text-slate-500 text-sm mt-1">載入身分中...</p>
+        </div>
+
+        <!-- Step 1: Course -->
+        <div id="step-course" class="bg-white rounded-2xl shadow-sm p-6 mb-4">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">1. 選擇預約課程</h2>
+            <div id="course-list" class="space-y-2">
+                <!-- 由 JS 動態填充 -->
+            </div>
+        </div>
+
+        <!-- Step 2: Date -->
+        <div id="step-date" class="bg-white rounded-2xl shadow-sm p-6 mb-4 opacity-50 pointer-events-none">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">2. 選擇日期</h2>
+            <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs">
+                <!-- 日曆由 JS 生成 -->
+            </div>
+        </div>
+
+        <!-- Step 3: Time -->
+        <div id="step-time" class="bg-white rounded-2xl shadow-sm p-6 mb-4 opacity-50 pointer-events-none">
+            <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">3. 選擇時段</h2>
+            <div id="time-slots" class="grid grid-cols-3 gap-2">
+                <!-- 時段由 JS 生成 -->
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <button id="submit-btn" disabled class="w-full bg-slate-300 text-white py-4 rounded-2xl font-bold text-lg shadow-lg transition-all duration-300 mb-10">
+            確認預約
+        </button>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-6 z-50">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-xs text-center">
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">預約成功</h3>
+            <p class="text-slate-500 mb-6">已同步至 Google 日曆</p>
+            <button onclick="liff.closeWindow()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold">關閉視窗</button>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyfGffPuudU6pu_Jm0LBjazyysVO9ed2cnOowHgeApHTvxsQZaun7S6lLBfuji548Kt/exec';
+        let state = {
+            userId: null,
+            name: '',
+            course: null,
+            date: null,
+            time: null,
+            availableSlots: []
+        };
+
+        async function init() {
+            await liff.init({ liffId: "2008853844-2zr8uzLz" });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return;
+            }
+            const profile = await liff.getProfile();
+            state.userId = profile.userId;
+            
+            fetchUserData();
+            fetchSlots();
+        }
+
+        async function fetchUserData() {
+            const res = await fetch(`${GAS_URL}?action=getUserData&userId=${state.userId}`);
+            const data = await res.json();
+            state.name = data.name;
+            document.getElementById('user-welcome').textContent = `${data.name} 醫師，您好`;
+            
+            const container = document.getElementById('course-list');
+            data.courses.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 border-2 border-slate-100 rounded-xl hover:border-blue-500 transition-all focus:border-blue-500 focus:bg-blue-50";
+                btn.textContent = c;
+                btn.onclick = () => {
+                    state.course = c;
+                    document.getElementById('step-date').classList.remove('opacity-50', 'pointer-events-none');
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        async function fetchSlots() {
+            const res = await fetch(`${GAS_URL}?action=getAvailableSlots`);
+            state.availableSlots = await res.json();
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendar');
+            const days = ['日','一','二','三','四','五','六'];
+            days.forEach(d => container.innerHTML += `<div class="text-slate-300 py-2">${d}</div>`);
+
+            const today = new Date();
+            for (let i = 0; i < 30; i++) {
+                const d = new Date();
+                d.setDate(today.getDate() + i);
+                if (d.getDay() === 0 || d.getDay() === 6) continue;
+
+                const dateStr = d.toISOString().split('T')[0];
+                const hasSlot = state.availableSlots.some(s => s.startsWith(dateStr));
+                
+                const dayEl = document.createElement('div');
+                dayEl.className = `py-3 rounded-lg ${hasSlot ? 'bg-slate-100 cursor-pointer hover:bg-blue-100' : 'text-slate-300'}`;
+                dayEl.innerHTML = `<span class="block font-bold">${d.getDate()}</span>`;
+                
+                if (hasSlot) {
+                    dayEl.onclick = () => selectDate(dateStr, dayEl);
+                }
+                container.appendChild(dayEl);
+            }
+        }
+
+        function selectDate(dateStr, el) {
+            state.date = dateStr;
+            document.querySelectorAll('#calendar div').forEach(d => d.classList.remove('bg-blue-500', 'text-white'));
+            el.classList.add('bg-blue-500', 'text-white');
+            
+            document.getElementById('step-time').classList.remove('opacity-50', 'pointer-events-none');
+            const timeContainer = document.getElementById('time-slots');
+            timeContainer.innerHTML = '';
+            
+            const slots = state.availableSlots.filter(s => s.startsWith(dateStr));
+            slots.forEach(s => {
+                const timeStr = new Date(s).getHours() + ":00";
+                const btn = document.createElement('button');
+                btn.className = "p-3 border rounded-xl text-sm font-medium hover:bg-blue-50 border-slate-200";
+                btn.textContent = timeStr;
+                btn.onclick = () => {
+                    state.time = s;
+                    const submitBtn = document.getElementById('submit-btn');
+                    submitBtn.disabled = false;
+                    submitBtn.classList.replace('bg-slate-300', 'bg-blue-600');
+                };
+                timeContainer.appendChild(btn);
+            });
+        }
+
+        document.getElementById('submit-btn').onclick = async () => {
+            const btn = document.getElementById('submit-btn');
+            btn.textContent = "處理中...";
+            btn.disabled = true;
+
+            const params = new URLSearchParams({
+                action: 'submitBooking',
+                userId: state.userId,
+                name: state.name,
+                course: state.course,
+                startTime: state.time
+            });
+
+            const res = await fetch(`${GAS_URL}?${params.toString()}`);
+            const result = await res.json();
+            if (result.status === 'success') {
+                document.getElementById('success-modal').classList.replace('hidden', 'flex');
+            }
+        };
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>醫影部教學預約</title>
+    <title>醫影部教學預約系統</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .dot { height: 4px; width: 4px; background-color: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 2px; }
+        /* 查詢模式下有課的格子樣式 */
+        .has-event { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
     <div id="app" class="max-w-md mx-auto p-4 pb-20">
-        <!-- 載入中動畫 -->
         <div id="loading" class="fixed inset-0 bg-white/90 flex items-center justify-center z-50">
             <div class="text-center">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -21,33 +22,37 @@
         </div>
 
         <div id="page-content" class="hidden">
-            <!-- 視圖：預約與查詢課表 (月曆視圖) -->
             <div id="view-calendar" class="hidden">
-                <div class="bg-white rounded-3xl p-6 shadow-sm mb-4">
-                    <h1 id="calendar-title" class="text-xl font-bold text-slate-800">全體課表查詢</h1>
+                <div class="bg-white rounded-3xl p-6 shadow-sm mb-4 text-center">
+                    <h1 id="calendar-title" class="text-xl font-bold text-slate-800">課表查詢</h1>
                     <p id="user-info-cal" class="text-blue-600 text-sm font-bold mt-1"></p>
                 </div>
 
-                <!-- 預約模式專用：選擇課程 -->
                 <div id="course-section" class="bg-white rounded-3xl p-6 shadow-sm mb-4 hidden">
                     <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">1. 選擇預約主題</h2>
                     <div id="course-list" class="space-y-2"></div>
                 </div>
 
-                <!-- 月曆本體 -->
                 <div id="calendar-container" class="bg-white rounded-3xl p-6 shadow-sm mb-4">
                     <h2 id="calendar-step-text" class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">全體排課狀況</h2>
                     <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
                     
-                    <!-- 日期點選後的明細 -->
                     <div id="day-detail" class="mt-6 pt-6 border-t border-slate-100 hidden">
                         <p id="selected-date-text" class="text-sm font-black text-slate-700 mb-4"></p>
                         <div id="time-slots" class="grid grid-cols-1 gap-2"></div>
                     </div>
                 </div>
+
+                <div id="month-summary-section" class="bg-white rounded-3xl p-6 shadow-sm mb-4 hidden">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center">
+                        <span class="w-1 h-3 bg-blue-500 rounded-full mr-2"></span>
+                        未來一個月課程總覽
+                    </h2>
+                    <div id="summary-list" class="space-y-3 mt-4">
+                        </div>
+                </div>
             </div>
 
-            <!-- 視圖：更改時間 (個人紀錄清單) -->
             <div id="view-modify" class="hidden">
                 <div class="bg-white rounded-3xl p-6 shadow-sm mb-4 text-center">
                     <h1 class="text-xl font-bold text-slate-800">更改預約時間</h1>
@@ -59,7 +64,6 @@
         </div>
     </div>
 
-    <!-- 互動選單 Modal -->
     <div id="action-modal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-[40px] p-8 w-full max-w-xs text-center shadow-2xl">
             <h3 class="text-lg font-bold mb-2">管理預約</h3>
@@ -72,7 +76,6 @@
         </div>
     </div>
 
-    <!-- 成功提示彈窗 -->
     <div id="success-modal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-[40px] p-10 w-full max-w-xs text-center shadow-2xl">
             <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -85,7 +88,7 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxPfCxD6wWqUWZ-oy_a2lvLsc5oVR2P4BW3yAn69T0d1v0XvES5dqBeYxYu2oZ0OEh9/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxjki2icB0gpvfF8aJhiM3UWNJI8oRDLpEPZyl_201t2Mq35fGN5xjxgv7FOcgu2o5_/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
         let state = { userId: null, name: '', course: null, date: null, allEvents: [], currentAction: null };
 
@@ -96,9 +99,8 @@
             state.userId = profile.userId;
 
             const urlParams = new URLSearchParams(window.location.search);
-            state.currentAction = urlParams.get('action');
+            state.currentAction = urlParams.get('action') || 'view';
 
-            // 抓取全域資料
             const [userRes, eventRes] = await Promise.all([
                 fetch(`${GAS_URL}?action=getUserData&userId=${state.userId}`),
                 fetch(`${GAS_URL}?action=getAllEvents`)
@@ -126,6 +128,7 @@
                 document.getElementById('course-section').classList.remove('hidden');
                 document.getElementById('calendar-step-text').textContent = "2. 選擇上課日期";
                 const list = document.getElementById('course-list');
+                list.innerHTML = '';
                 data.courses.forEach(c => {
                     const btn = document.createElement('button');
                     btn.className = "w-full text-left p-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 transition-all";
@@ -139,6 +142,9 @@
                     list.appendChild(btn);
                 });
                 document.getElementById('calendar-container').classList.add('opacity-30', 'pointer-events-none');
+            } else {
+                // 查詢模式顯示總覽區塊
+                document.getElementById('month-summary-section').classList.remove('hidden');
             }
 
             renderCalendar(isBookMode);
@@ -146,7 +152,10 @@
 
         function renderCalendar(isBookMode) {
             const container = document.getElementById('calendar');
+            const summaryList = document.getElementById('summary-list');
             container.innerHTML = '';
+            if (summaryList) summaryList.innerHTML = '';
+
             const weeks = ['日','一','二','三','四','五','六'];
             weeks.forEach(w => container.innerHTML += `<div class="text-slate-300 font-bold py-2">${w}</div>`);
             
@@ -159,17 +168,47 @@
                 const el = document.createElement('div');
                 const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                 
-                el.className = `py-3 rounded-xl font-bold transition-all relative ${isWeekend ? 'text-slate-200' : 'cursor-pointer hover:bg-slate-100'}`;
+                let baseClass = "py-3 rounded-xl font-bold transition-all relative ";
+                if (isWeekend) {
+                    baseClass += "text-slate-200";
+                } else {
+                    baseClass += "cursor-pointer hover:bg-slate-100 ";
+                    // 查詢模式下有課的日期顯示淺藍背景
+                    if (!isBookMode && dayEvents.length > 0) baseClass += "has-event ";
+                }
+                
+                el.className = baseClass;
                 el.innerHTML = `<span>${d.getDate()}</span>`;
                 
                 if (dayEvents.length > 0 && !isWeekend) {
                     el.innerHTML += `<div class="flex justify-center gap-0.5 mt-0.5">${dayEvents.map(() => '<span class="dot"></span>').join('')}</div>`;
+                    
+                    // 如果是查詢模式，填充下方總覽清單
+                    if (!isBookMode) {
+                        dayEvents.forEach(ev => {
+                            const t = new Date(ev.start);
+                            const item = document.createElement('div');
+                            item.className = "flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100";
+                            item.innerHTML = `
+                                <div>
+                                    <div class="text-slate-800 font-bold text-sm">${ev.title}</div>
+                                    <div class="text-slate-400 text-xs mt-1">${t.getMonth()+1}/${t.getDate()} (${weeks[t.getDay()]}) ${t.getHours()}:00</div>
+                                </div>
+                                <div class="text-blue-500 font-black">●</div>
+                            `;
+                            summaryList.appendChild(item);
+                        });
+                    }
                 }
 
                 if (!isWeekend) {
                     el.onclick = () => selectDate(dateStr, el, dayEvents, isBookMode);
                 }
                 container.appendChild(el);
+            }
+            
+            if (!isBookMode && summaryList.innerHTML === '') {
+                summaryList.innerHTML = '<p class="text-center text-slate-400 py-10 text-sm">未來一個月尚無排課</p>';
             }
         }
 
@@ -180,7 +219,7 @@
             
             const detail = document.getElementById('day-detail');
             detail.classList.remove('hidden');
-            document.getElementById('selected-date-text').textContent = dateStr + " 排課狀況";
+            document.getElementById('selected-date-text').textContent = dateStr + " 詳細課表";
             
             const tc = document.getElementById('time-slots');
             tc.innerHTML = '';
@@ -188,18 +227,22 @@
             
             hours.forEach(h => {
                 const booked = events.find(e => new Date(e.start).getHours() === h);
-                const btn = document.createElement('button');
+                const row = document.createElement('div');
                 
                 if (isBookMode) {
+                    const btn = document.createElement('button');
                     btn.className = `w-full p-4 rounded-2xl text-sm font-bold border-2 flex justify-between items-center ${booked ? 'bg-slate-50 border-slate-100 text-slate-300' : 'border-blue-100 text-blue-600 hover:bg-blue-50'}`;
                     btn.innerHTML = `<span>${h}:00 時段</span> <span>${booked ? booked.title : '點擊預約'}</span>`;
                     if (!booked) btn.onclick = () => submitBooking(dateStr + 'T' + String(h).padStart(2,'0') + ':00:00');
+                    tc.appendChild(btn);
                 } else {
-                    btn.className = `w-full p-4 rounded-2xl text-sm font-bold border-2 flex justify-between items-center ${booked ? 'border-slate-200 text-slate-700 bg-slate-50' : 'border-dashed border-slate-100 text-slate-300'}`;
-                    btn.innerHTML = `<span>${h}:00</span> <span>${booked ? booked.title : '尚未預約'}</span>`;
+                    row.className = `w-full p-4 rounded-2xl text-sm font-bold border-2 flex justify-between items-center ${booked ? 'border-blue-200 text-blue-800 bg-blue-50' : 'border-dashed border-slate-100 text-slate-300'}`;
+                    row.innerHTML = `<span>${h}:00</span> <span>${booked ? booked.title : '尚未預約'}</span>`;
+                    tc.appendChild(row);
                 }
-                tc.appendChild(btn);
             });
+            // 點選後自動滾動到明細區塊
+            detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         async function submitBooking(startTime) {
@@ -224,7 +267,7 @@
             list.innerHTML = '';
             
             if (data.length === 0) {
-                list.innerHTML = '<p class="text-center text-slate-400 py-10">未來一個月尚無預約</p>';
+                list.innerHTML = '<p class="text-center text-slate-400 py-10">未來一個月尚無您的預約紀錄</p>';
                 return;
             }
 

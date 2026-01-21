@@ -16,7 +16,7 @@
         .day-cell { @apply min-h-[85px] border border-slate-50 rounded-xl p-1 flex flex-col items-center relative transition-all; }
         .is-today { @apply border-blue-500 border-2; }
         
-        /* 修正紫色樣式：紫色字體 + 淺紫色背景，造型與藍色課程完全一致 */
+        /* 紫色高亮樣式 (使用者本人的課程) */
         .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
         .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
@@ -48,14 +48,12 @@
                         </div>
                         <button onclick="clearSelection()" class="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-500 font-bold">重選</button>
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-3 mb-4">
                         <button onclick="adminBatchAction('single', 1)" class="btn-secondary text-xs py-3">Week 1 課程</button>
                         <button onclick="adminBatchAction('single', 2)" class="btn-secondary text-xs py-3">Week 2 課程</button>
                         <button onclick="adminBatchAction('single', 3)" class="btn-secondary text-xs py-3">Week 3 課程</button>
                         <button onclick="adminBatchAction('single', 4)" class="btn-secondary text-xs py-3">Week 4 課程</button>
                     </div>
-                    
                     <div class="flex flex-col gap-2">
                         <div class="flex gap-2">
                             <button onclick="adminBatchAction('four_weeks')" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-emerald-100">新增四週課程</button>
@@ -79,14 +77,12 @@
                     <span id="mode-badge" class="bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-black"></span>
                 </div>
                 
-                <!-- 課程主題選擇 -->
                 <div id="course-selector" class="mb-6 hidden">
                     <div id="course-list" class="grid grid-cols-2 gap-2"></div>
                 </div>
 
                 <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
                 
-                <!-- 時段細節 -->
                 <div id="day-detail" class="mt-8 pt-6 border-t border-slate-100 hidden">
                     <p id="selected-date-text" class="text-sm font-black text-slate-700 mb-4"></p>
                     <div id="time-slots" class="space-y-2"></div>
@@ -98,26 +94,19 @@
     <!-- 成功彈窗 -->
     <div id="modal-success" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-[70] backdrop-blur-sm">
         <div class="bg-white rounded-[40px] p-10 w-full max-w-xs text-center shadow-2xl">
-            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
-            <h3 class="text-xl font-black mb-2 text-slate-800">課程處理成功</h3>
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
+            <h3 class="text-xl font-black mb-2 text-slate-800">處理成功</h3>
             <p id="success-msg" class="text-slate-500 mb-8 text-sm leading-relaxed"></p>
             <button onclick="closeSuccessModal()" class="w-full py-4 rounded-2xl font-bold transition-all active:scale-95 bg-white text-slate-900 border border-slate-200">留在管理分頁</button>
         </div>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwgGJodozojWoy3hESK8EPlgh1asIk0YpeREpg8Vym_FHCIXuD8KwdZ3WLs8Y0yZ3hXjg/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwQZjvgZyiG9bkPrEkLhk_YFPCrxzUtssLPzpyijxrL4_ZRSTY47kc0I42GjqgDQdiLow/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
         
         let state = { 
-            userId: null, 
-            name: '', // 比對用姓名
-            rawName: '', // 原始姓名
-            action: 'view', 
-            allEvents: [], 
-            course: null,
-            selectedMonday: null,
-            userCourses: [] 
+            userId: null, name: '', rawName: '', action: 'view', allEvents: [], course: null, selectedMonday: null, userCourses: []
         };
 
         async function init() {
@@ -126,14 +115,11 @@
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 const profile = await liff.getProfile();
                 state.userId = profile.userId;
-
                 const params = new URLSearchParams(window.location.search);
                 state.action = params.get('action') || 'view';
-
                 await refreshData();
                 setupModeUI();
                 renderCalendar();
-
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('page-content').classList.remove('hidden');
             } catch (e) { console.error(e); }
@@ -146,12 +132,10 @@
             ]);
             const userData = await userRes.json();
             state.allEvents = await eventRes.json();
-            
             state.rawName = (userData.name || '訪客').trim();
-            // 比對邏輯：移除空格與「醫師」
+            // 比對邏輯：移除空格與職稱
             state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '');
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "").filter(c => c !== "");
-            
             document.getElementById('user-info').textContent = `${state.rawName} 醫師`;
         }
 
@@ -159,8 +143,7 @@
             const title = document.getElementById('page-title');
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            
-            if (state.action === 'admin') { title.textContent = "排課管理控制台"; badge.textContent = "管理模式"; inst.textContent = "點擊任一天"; }
+            if (state.action === 'admin') { title.textContent = "排課管理控制台"; badge.textContent = "管理模式"; inst.textContent = "請點選任一天"; }
             else if (state.action === 'book') { title.textContent = "預約新課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); }
             else if (state.action === 'modify') { title.textContent = "課程更動與取消"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色課程"; }
             else { title.textContent = "醫影部課表查詢"; badge.textContent = "查詢模式"; inst.textContent = "點擊日期查看"; }
@@ -184,34 +167,41 @@
         }
 
         /**
-         * 智慧解析日曆標題並辨識身分
+         * 強健標題解析：同步所有顯示格式為「醫師姓名醫師(課程名稱)」
          */
         function parseEventTitle(title) {
             const match = title.match(/(.*)\((.*)\)/);
             if (match) {
-                let p1 = match[1].trim(); 
-                let p2 = match[2].trim(); 
+                let p1 = match[1].trim(); // 預期為醫師
+                let p2 = match[2].trim(); // 預期為課程
+                
                 const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, '');
                 const cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
                 
-                // 判斷邏輯：
-                // 1. 任一部分匹配登入者姓名
-                // 2. 或者任一部分包含於使用者的專屬課程清單中
-                const isNameMatch = (cp1 === state.name || cp2 === state.name);
-                const isCourseMatch = state.userCourses.some(myC => p1.includes(myC) || p2.includes(myC));
+                // 判斷哪一部分是醫師
+                // 邏輯：如果 P2 匹配我的姓名或 P1 是課程清單中的內容，則 P1 是醫師，P2 是課程
+                const isP1Mine = (cp1 === state.name || state.userCourses.includes(p2));
+                const isP2Mine = (cp2 === state.name || state.userCourses.includes(p1));
                 
-                const isMine = isNameMatch || isCourseMatch;
+                let doc = '';
+                let course = '';
 
-                // 判斷醫師姓名部分 (含有"醫師"字眼或匹配姓名者)
-                const p1IsDoc = p1.includes('醫師') || cp1 === state.name;
-                let doc = p1IsDoc ? p1 : p2;
-                let course = p1IsDoc ? p2 : p1;
-                
+                // 如果 P1 包含「醫師」或匹配姓名，則 P1 是醫師
+                if (p1.includes('醫師') || cp1 === state.name) {
+                    doc = p1; course = p2;
+                } else if (p2.includes('醫師') || cp2 === state.name) {
+                    doc = p2; course = p1;
+                } else {
+                    // 若都沒醫師關鍵字，預設第一段是醫師
+                    doc = p1; course = p2;
+                }
+
+                // 確保姓名後方有「醫師」二字
                 if (!doc.includes('醫師')) doc += '醫師';
-
+                
                 return { 
                     display: `${doc}(${course})`, 
-                    isMine: isMine,
+                    isMine: (isP1Mine || isP2Mine),
                     id: null 
                 };
             }
@@ -227,7 +217,6 @@
                 h.textContent = w;
                 container.appendChild(h);
             });
-
             const today = new Date();
             const startOffset = (today.getDay() + 6) % 7;
             for (let i = 0; i < startOffset; i++) container.appendChild(document.createElement('div'));
@@ -292,7 +281,6 @@
                 const info = booked ? parseEventTitle(booked.title) : null;
                 const isMine = info ? info.isMine : false;
                 const row = document.createElement('div');
-                // 重點：確保所有模式下我的課程都套用紫色邊框樣式
                 const rowClass = booked ? (isMine ? 'my-event-border' : 'border-blue-100 bg-blue-50/30') : 'border-slate-50 bg-white';
                 row.className = `w-full p-5 rounded-3xl border-2 flex justify-between items-center font-black text-sm ${rowClass}`;
                 
@@ -300,6 +288,7 @@
                 let infoLabel = `<span class="text-slate-400 font-normal">${h}:00 時段</span>`;
 
                 if (state.action === 'book') {
+                    // 同步預約模式顯示：若已被預約，顯示詳細格式
                     if (booked) {
                         infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
                         actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`;
@@ -311,14 +300,10 @@
                         infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
                         if (isMine) actionBtn = `<button onclick="doCancel('${booked.id}')" class="my-event-btn px-5 py-2 rounded-xl text-xs font-black">取消</button>`;
                         else actionBtn = `<span class="text-slate-300 text-[10px]">他人課程</span>`;
-                    } else {
-                        actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`;
-                    }
+                    } else { actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`; }
                 } else {
                     // 查詢模式 (view)
-                    if (booked) {
-                        infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
-                    }
+                    if (booked) infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
                     actionBtn = `<span class="text-slate-400 text-[10px] font-bold">${booked ? (isMine ? '我的課程' : '已排課') : '尚無課程'}</span>`;
                 }
                 row.innerHTML = `${infoLabel} ${actionBtn}`;

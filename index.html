@@ -15,9 +15,10 @@
         .week-highlight { @apply ring-2 ring-blue-500 bg-blue-50 z-10; }
         .day-cell { @apply min-h-[85px] border border-slate-50 rounded-xl p-1 flex flex-col items-center relative transition-all; }
         .is-today { @apply border-blue-500 border-2; }
-        /* 新增紫色高亮樣式 */
+        
+        /* 紫色高亮樣式 (使用者本人的課程) */
         .my-event-bg { @apply bg-purple-100 text-purple-600 !important; }
-        .my-event-border { @apply border-purple-200 bg-purple-50/50 !important; }
+        .my-event-border { @apply border-purple-200 bg-purple-50 !important; }
         .my-event-text { @apply text-purple-700 !important; }
         .my-event-btn { @apply bg-purple-600 text-white shadow-purple-100 !important; }
     </style>
@@ -229,7 +230,7 @@
                         const h = new Date(e.start).getHours();
                         const doc = e.title.split('(')[1]?.replace(')','') || '';
                         
-                        // 辨識是否為自己的課程
+                        // 辨識是否為自己的課程：檢查標題是否包含 (我的姓名)
                         const isMyEvent = e.title.includes(`(${state.name})`);
                         const eventClass = isMyEvent ? 'my-event-bg' : 'bg-blue-100 text-blue-600';
                         
@@ -293,7 +294,7 @@
                 const isMyEvent = booked && booked.title.includes(`(${state.name})`);
                 
                 const row = document.createElement('div');
-                // 如果是自己的課，背景變紫色
+                // 背景色判斷：若為本人課程套用紫色邊框
                 const rowClass = booked ? (isMyEvent ? 'my-event-border' : 'border-blue-100 bg-blue-50/30') : 'border-slate-50 bg-white';
                 row.className = `w-full p-5 rounded-3xl border-2 flex justify-between items-center font-black text-sm ${rowClass}`;
                 
@@ -305,10 +306,10 @@
                     else actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`;
                 } else if (state.action === 'modify') {
                     if (booked) {
-                        infoLabel = `<span class="text-xs ${isMyEvent ? 'my-event-text' : 'text-slate-800'}">${h}:00 ${booked.title}</span>`;
-                        // 權限判斷：只有自己的課才有取消按鈕
+                        infoLabel = `<span class="${isMyEvent ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${booked.title}</span>`;
+                        // 權限判斷：僅本人的課程顯示取消按鈕
                         if (isMyEvent) {
-                            actionBtn = `<button onclick="doCancel('${booked.id}')" class="text-white bg-purple-600 px-5 py-2 rounded-xl text-xs font-black shadow-lg shadow-purple-100">取消預約</button>`;
+                            actionBtn = `<button onclick="doCancel('${booked.id}')" class="my-event-btn px-5 py-2 rounded-xl text-xs font-black">取消</button>`;
                         } else {
                             actionBtn = `<span class="text-slate-300 text-[10px]">他人課程</span>`;
                         }
@@ -316,8 +317,10 @@
                         actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`;
                     }
                 } else {
-                    // 查詢模式：點紫色也能看資訊
-                    if (booked) infoLabel = `<span class="text-xs ${isMyEvent ? 'my-event-text' : 'text-slate-800'}">${h}:00 ${booked.title}</span>`;
+                    // 查詢模式
+                    if (booked) {
+                        infoLabel = `<span class="${isMyEvent ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${booked.title}</span>`;
+                    }
                     actionBtn = `<span class="text-slate-400 text-[10px] font-bold">${booked ? (isMyEvent ? '我的課程' : '已排課') : '尚無課程'}</span>`;
                 }
 

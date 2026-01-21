@@ -16,11 +16,9 @@
         .day-cell { @apply min-h-[85px] border border-slate-50 rounded-xl p-1 flex flex-col items-center relative transition-all; }
         .is-today { @apply border-blue-500 border-2; }
         
-        /* 紫色高亮樣式 (使用者本人的課程) */
         .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
         .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
-        .my-event-btn { background-color: #9333ea !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.1) !important; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
@@ -32,60 +30,73 @@
         </div>
 
         <div id="page-content" class="hidden">
-            <!-- 頂部標題 -->
-            <header class="text-center mb-6 pt-2">
-                <h1 id="page-title" class="text-xl font-black tracking-tight text-slate-800">醫影部教學系統</h1>
-                <p id="user-info" class="text-blue-600 text-xs font-bold mt-1"></p>
-            </header>
-
-            <!-- 管理員操作面板 -->
-            <div id="admin-panel" class="fixed bottom-0 left-0 right-0 bg-white p-6 rounded-t-[40px] shadow-[0_-15px_50px_rgba(0,0,0,0.1)] z-40 hidden border-t border-slate-100">
-                <div class="max-w-md mx-auto">
-                    <div class="flex justify-between items-center mb-5">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">目前選取週次</span>
-                            <h3 id="selected-week-range" class="font-black text-slate-800 text-lg"></h3>
-                        </div>
-                        <button onclick="clearSelection()" class="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-500 font-bold">重選</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 mb-4">
-                        <button onclick="adminBatchAction('single', 1)" class="btn-secondary text-xs py-3">Week 1 課程</button>
-                        <button onclick="adminBatchAction('single', 2)" class="btn-secondary text-xs py-3">Week 2 課程</button>
-                        <button onclick="adminBatchAction('single', 3)" class="btn-secondary text-xs py-3">Week 3 課程</button>
-                        <button onclick="adminBatchAction('single', 4)" class="btn-secondary text-xs py-3">Week 4 課程</button>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <div class="flex gap-2">
-                            <button onclick="adminBatchAction('four_weeks')" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-emerald-100">新增四週課程</button>
-                            <button onclick="adminBatchAction('delete_four')" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold text-xs">刪除四週課程</button>
-                        </div>
-                        <button onclick="adminBatchAction('delete')" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-bold text-xs">刪除單週課程</button>
-                    </div>
+            <!-- 綁定介面 (未綁定時顯示) -->
+            <div id="view-binding" class="hidden space-y-6 pt-10">
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">👤</div>
+                    <h2 class="text-2xl font-black">身分綁定</h2>
+                    <p class="text-slate-400 text-sm mt-2">偵測到您尚未綁定身分，<br>請選擇您的姓名以繼續使用系統。</p>
+                </div>
+                <div id="binding-list" class="grid grid-cols-1 gap-3">
+                    <!-- 動態載入姓名清單 -->
                 </div>
             </div>
 
-            <!-- 主月曆容器 -->
-            <div id="calendar-container" class="bg-white rounded-3xl p-5 shadow-sm mb-4">
-                <div id="calendar-instruction" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex justify-between items-center">
-                    <div class="flex items-center gap-2">
-                        <span id="instruction-text">載入中...</span>
-                        <div class="flex items-center gap-1 ml-2">
-                            <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                            <span class="text-[8px] normal-case font-bold text-purple-600">我的課程</span>
+            <!-- 主功能介面 -->
+            <div id="view-main" class="hidden">
+                <header class="text-center mb-6 pt-2">
+                    <h1 id="page-title" class="text-xl font-black tracking-tight text-slate-800">醫影部教學系統</h1>
+                    <p id="user-info" class="text-blue-600 text-xs font-bold mt-1"></p>
+                </header>
+
+                <!-- 管理員面板 -->
+                <div id="admin-panel" class="fixed bottom-0 left-0 right-0 bg-white p-6 rounded-t-[40px] shadow-[0_-15px_50px_rgba(0,0,0,0.1)] z-40 hidden border-t border-slate-100">
+                    <div class="max-w-md mx-auto">
+                        <div class="flex justify-between items-center mb-5">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">目前選取週次</span>
+                                <h3 id="selected-week-range" class="font-black text-slate-800 text-lg"></h3>
+                            </div>
+                            <button onclick="clearSelection()" class="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-500 font-bold">重選</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <button onclick="adminBatchAction('single', 1)" class="btn-secondary text-xs py-3">Week 1 課程</button>
+                            <button onclick="adminBatchAction('single', 2)" class="btn-secondary text-xs py-3">Week 2 課程</button>
+                            <button onclick="adminBatchAction('single', 3)" class="btn-secondary text-xs py-3">Week 3 課程</button>
+                            <button onclick="adminBatchAction('single', 4)" class="btn-secondary text-xs py-3">Week 4 課程</button>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex gap-2">
+                                <button onclick="adminBatchAction('four_weeks')" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-emerald-100">新增四週課程</button>
+                                <button onclick="adminBatchAction('delete_four')" class="flex-1 bg-slate-800 text-white py-4 rounded-2xl font-bold text-xs">刪除四週課程</button>
+                            </div>
+                            <button onclick="adminBatchAction('delete')" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-bold text-xs">刪除單週課程</button>
                         </div>
                     </div>
-                    <span id="mode-badge" class="bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-black"></span>
-                </div>
-                
-                <div id="course-selector" class="mb-6 hidden">
-                    <div id="course-list" class="grid grid-cols-2 gap-2"></div>
                 </div>
 
-                <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
-                
-                <div id="day-detail" class="mt-8 pt-6 border-t border-slate-100 hidden">
-                    <p id="selected-date-text" class="text-sm font-black text-slate-700 mb-4"></p>
-                    <div id="time-slots" class="space-y-2"></div>
+                <div id="calendar-container" class="bg-white rounded-3xl p-5 shadow-sm mb-4">
+                    <div id="calendar-instruction" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span id="instruction-text">載入中...</span>
+                            <div class="flex items-center gap-1 ml-2">
+                                <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+                                <span class="text-[8px] normal-case font-bold text-purple-600">我的課程</span>
+                            </div>
+                        </div>
+                        <span id="mode-badge" class="bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-black"></span>
+                    </div>
+                    
+                    <div id="course-selector" class="mb-6 hidden">
+                        <div id="course-list" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+                    
+                    <div id="day-detail" class="mt-8 pt-6 border-t border-slate-100 hidden">
+                        <p id="selected-date-text" class="text-sm font-black text-slate-700 mb-4"></p>
+                        <div id="time-slots" class="space-y-2"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,11 +128,15 @@
                 state.userId = profile.userId;
                 const params = new URLSearchParams(window.location.search);
                 state.action = params.get('action') || 'view';
+
                 await refreshData();
-                setupModeUI();
-                renderCalendar();
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('page-content').classList.remove('hidden');
+
+                // 檢查是否已綁定
+                if (state.name === '訪客' || !state.name) {
+                    showBindingView();
+                } else {
+                    showMainView();
+                }
             } catch (e) { console.error(e); }
         }
 
@@ -133,17 +148,56 @@
             const userData = await userRes.json();
             state.allEvents = await eventRes.json();
             state.rawName = (userData.name || '訪客').trim();
-            // 比對邏輯：移除空格與職稱
             state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '');
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "").filter(c => c !== "");
+        }
+
+        // 顯示綁定頁面
+        async function showBindingView() {
+            document.getElementById('loading').classList.remove('hidden');
+            const res = await fetch(`${GAS_URL}?action=getAllUserNames`);
+            const names = await res.json();
+            
+            const list = document.getElementById('binding-list');
+            list.innerHTML = '';
+            names.forEach(n => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-slate-700 shadow-sm active:bg-blue-50 active:border-blue-200 transition-all";
+                btn.textContent = `我是 ${n}`;
+                btn.onclick = () => doBind(n);
+                list.appendChild(btn);
+            });
+
+            document.getElementById('view-binding').classList.remove('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('page-content').classList.remove('hidden');
+        }
+
+        async function doBind(name) {
+            if(!confirm(`確定要將身分綁定為「${name}」嗎？`)) return;
+            document.getElementById('loading').classList.remove('hidden');
+            const res = await fetch(`${GAS_URL}?action=bindUser&userId=${state.userId}&name=${encodeURIComponent(name)}`);
+            const result = await res.json();
+            if(result.status === 'success') {
+                alert('綁定成功！即將進入系統。');
+                location.reload();
+            }
+        }
+
+        function showMainView() {
             document.getElementById('user-info').textContent = `${state.rawName} 醫師`;
+            setupModeUI();
+            renderCalendar();
+            document.getElementById('view-main').classList.remove('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('page-content').classList.remove('hidden');
         }
 
         function setupModeUI() {
             const title = document.getElementById('page-title');
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            if (state.action === 'admin') { title.textContent = "排課管理控制台"; badge.textContent = "管理模式"; inst.textContent = "請點選任一天"; }
+            if (state.action === 'admin') { title.textContent = "排課管理控制台"; badge.textContent = "管理模式"; inst.textContent = "請點選週一範圍"; }
             else if (state.action === 'book') { title.textContent = "預約新課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); }
             else if (state.action === 'modify') { title.textContent = "課程更動與取消"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色課程"; }
             else { title.textContent = "醫影部課表查詢"; badge.textContent = "查詢模式"; inst.textContent = "點擊日期查看"; }
@@ -166,44 +220,19 @@
             });
         }
 
-        /**
-         * 強健標題解析：同步所有顯示格式為「醫師姓名醫師(課程名稱)」
-         */
         function parseEventTitle(title) {
             const match = title.match(/(.*)\((.*)\)/);
             if (match) {
-                let p1 = match[1].trim(); // 預期為醫師
-                let p2 = match[2].trim(); // 預期為課程
-                
+                let p1 = match[1].trim(); 
+                let p2 = match[2].trim(); 
                 const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, '');
                 const cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
-                
-                // 判斷哪一部分是醫師
-                // 邏輯：如果 P2 匹配我的姓名或 P1 是課程清單中的內容，則 P1 是醫師，P2 是課程
-                const isP1Mine = (cp1 === state.name || state.userCourses.includes(p2));
-                const isP2Mine = (cp2 === state.name || state.userCourses.includes(p1));
-                
-                let doc = '';
-                let course = '';
-
-                // 如果 P1 包含「醫師」或匹配姓名，則 P1 是醫師
-                if (p1.includes('醫師') || cp1 === state.name) {
-                    doc = p1; course = p2;
-                } else if (p2.includes('醫師') || cp2 === state.name) {
-                    doc = p2; course = p1;
-                } else {
-                    // 若都沒醫師關鍵字，預設第一段是醫師
-                    doc = p1; course = p2;
-                }
-
-                // 確保姓名後方有「醫師」二字
+                const isMine = (cp1 === state.name || cp2 === state.name || state.userCourses.includes(p1) || state.userCourses.includes(p2));
+                const p1IsDoc = p1.includes('醫師') || cp1 === state.name;
+                let doc = p1IsDoc ? p1 : p2;
+                let course = p1IsDoc ? p2 : p1;
                 if (!doc.includes('醫師')) doc += '醫師';
-                
-                return { 
-                    display: `${doc}(${course})`, 
-                    isMine: (isP1Mine || isP2Mine),
-                    id: null 
-                };
+                return { display: `${doc}(${course})`, isMine: isMine };
             }
             return { display: title.trim(), isMine: false };
         }
@@ -220,7 +249,6 @@
             const today = new Date();
             const startOffset = (today.getDay() + 6) % 7;
             for (let i = 0; i < startOffset; i++) container.appendChild(document.createElement('div'));
-
             for (let i = 0; i < 42; i++) {
                 const d = new Date(today);
                 d.setDate(today.getDate() + i);
@@ -231,7 +259,6 @@
                 el.dataset.date = dateStr;
                 el.className = `day-cell ${isWeekend ? 'bg-slate-50 text-slate-200' : 'bg-white cursor-pointer hover:bg-slate-50'}`;
                 el.innerHTML = `<span class="text-[10px] mb-2 font-black">${d.getDate()}</span>`;
-                
                 if (events.length > 0 && !isWeekend) {
                     events.forEach(e => {
                         const h = new Date(e.start).getHours();
@@ -288,13 +315,8 @@
                 let infoLabel = `<span class="text-slate-400 font-normal">${h}:00 時段</span>`;
 
                 if (state.action === 'book') {
-                    // 同步預約模式顯示：若已被預約，顯示詳細格式
-                    if (booked) {
-                        infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
-                        actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`;
-                    } else {
-                        actionBtn = `<button onclick="doBooking('${dateStr}T${String(h).padStart(2,'0')}:00:00')" class="text-white bg-blue-600 px-5 py-2 rounded-xl text-xs shadow-lg shadow-blue-100">預約</button>`;
-                    }
+                    if (booked) { infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`; actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`; }
+                    else { actionBtn = `<button onclick="doBooking('${dateStr}T${String(h).padStart(2,'0')}:00:00')" class="text-white bg-blue-600 px-5 py-2 rounded-xl text-xs shadow-lg shadow-blue-100">預約</button>`; }
                 } else if (state.action === 'modify') {
                     if (booked) {
                         infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
@@ -302,7 +324,6 @@
                         else actionBtn = `<span class="text-slate-300 text-[10px]">他人課程</span>`;
                     } else { actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`; }
                 } else {
-                    // 查詢模式 (view)
                     if (booked) infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
                     actionBtn = `<span class="text-slate-400 text-[10px] font-bold">${booked ? (isMine ? '我的課程' : '已排課') : '尚無課程'}</span>`;
                 }
@@ -333,7 +354,7 @@
             let url = `${GAS_URL}?action=`;
             if (type === 'four_weeks') { if (!confirm('確定連續套用 Week 1-4？')) return; url += `batchSchedule&type=four_weeks&startDate=${mondayStr}`; }
             else if (type === 'delete_four') {
-                if (!confirm('確定連刪四週？')) return;
+                if (!confirm('將連續刪除四週紀錄，確定？')) return;
                 const weeks = []; for(let i=0; i<4; i++) { let d = new Date(state.selectedMonday); d.setDate(state.selectedMonday.getDate() + (i*7)); weeks.push(d.toISOString().split('T')[0]); }
                 url += `batchDelete&weeks=${weeks.join(',')}`;
             } else if (type === 'single') { url += `batchSchedule&type=single&startDate=${mondayStr}&templateIdx=${tplIdx}`; }

@@ -16,6 +16,7 @@
         .day-cell { @apply min-h-[85px] border border-slate-50 rounded-xl p-1 flex flex-col items-center relative transition-all; }
         .is-today { @apply border-blue-500 border-2; }
         
+        /* 修正紫色樣式：紫色字體 + 淺紫色背景 */
         .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
         .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
@@ -24,21 +25,22 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
     <div id="app" class="max-w-md mx-auto p-4 pb-40">
+        <!-- 讀取遮罩 -->
         <div id="loading" class="fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-50">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p class="text-slate-500 font-bold text-sm">正在同步系統資料...</p>
+            <p class="text-slate-500 font-bold text-sm">正在讀取醫影部資料...</p>
         </div>
 
         <div id="page-content" class="hidden">
-            <!-- 綁定介面：已加入滾動與完整清單載入 -->
+            <!-- 綁定介面：顯示所有醫師名單 -->
             <div id="view-binding" class="hidden space-y-6 pt-6">
                 <div class="text-center px-4 mb-8">
-                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">👤</div>
+                    <div class="w-16 h-16 bg-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-lg">👤</div>
                     <h2 class="text-2xl font-black text-slate-800">身分辨識</h2>
-                    <p class="text-slate-400 text-xs mt-2 leading-relaxed">請在下方名單中選擇您的姓名以綁定系統</p>
+                    <p class="text-slate-400 text-sm mt-2 leading-relaxed">請在下方名單中選擇您的姓名以綁定系統</p>
                 </div>
-                <div id="binding-list" class="grid grid-cols-1 gap-3 px-2 overflow-y-auto max-h-[60vh] pb-10">
-                    <!-- 此處會載入所有姓名 -->
+                <div id="binding-list" class="grid grid-cols-1 gap-3 px-2 overflow-y-auto max-h-[70vh] pb-10">
+                    <!-- 動態載入所有姓名 -->
                 </div>
             </div>
 
@@ -105,7 +107,7 @@
     <!-- 成功彈窗 -->
     <div id="modal-success" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-[70] backdrop-blur-sm">
         <div class="bg-white rounded-[40px] p-10 w-full max-w-xs text-center shadow-2xl">
-            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
             <h3 class="text-xl font-black mb-2 text-slate-800">處理成功</h3>
             <p id="success-msg" class="text-slate-500 mb-8 text-sm leading-relaxed"></p>
             <button onclick="closeSuccessModal()" class="w-full py-4 rounded-2xl font-bold transition-all active:scale-95 bg-white text-slate-900 border border-slate-200">留在管理分頁</button>
@@ -113,7 +115,7 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw-sLzZyrz3at-nUrEczLvhSADTRsITo5-yt_g51rDp0bOfpb1OqVYqt3RaqCS8Buasrg/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwAI02ZdtvsX9DpaNsImwe9B84RU9vfvq1vdax6FkU5EEjptWhQSGKyHDYIeBwAevXsAg/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
         
         let state = { 
@@ -131,13 +133,16 @@
 
                 await refreshData();
 
-                // 判斷是否需要進行身分綁定
+                // 檢查是否已綁定姓名
                 if (!state.name || state.name === '訪客' || state.name === "") {
                     await showBindingView();
                 } else {
                     showMainView();
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                alert("初始化失敗，請稍後再試。");
+            }
         }
 
         async function refreshData() {
@@ -148,6 +153,7 @@
             const userData = await userRes.json();
             state.allEvents = await eventRes.json();
             state.rawName = (userData.name || '訪客').trim();
+            // 比對邏輯：移除空格與「醫師」標籤
             state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '');
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "").filter(c => c !== "");
         }
@@ -161,12 +167,12 @@
             list.innerHTML = '';
             
             if (names.length === 0) {
-                list.innerHTML = '<p class="text-center text-slate-400 py-10">試算表中目前沒有任何醫師名單。</p>';
+                list.innerHTML = '<p class="text-center text-slate-400 py-10">目前沒有可用的醫師名單。</p>';
             } else {
                 names.forEach(n => {
                     const btn = document.createElement('button');
                     btn.className = "w-full p-5 bg-white border-2 border-slate-100 rounded-3xl font-black text-slate-700 shadow-sm active:bg-blue-50 active:border-blue-300 active:scale-95 transition-all text-left flex justify-between items-center";
-                    btn.innerHTML = `<span>我是 ${n} 醫師</span> <span class="bg-blue-600 text-white p-1 rounded-full px-3 text-[10px]">選取</span>`;
+                    btn.innerHTML = `<span>我是 ${n} 醫師</span> <span class="bg-blue-600 text-white p-1 rounded-full px-4 text-[10px]">選取</span>`;
                     btn.onclick = () => doBind(n);
                     list.appendChild(btn);
                 });
@@ -195,8 +201,6 @@
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('page-content').classList.remove('hidden');
         }
-
-        // --- 以下為原有日曆邏輯 (已包含「姓名醫師(課程)」格式優化) ---
 
         function setupModeUI() {
             const title = document.getElementById('page-title');
@@ -339,27 +343,27 @@
         }
 
         async function doBooking(startTime) {
-            if (!state.course) return alert('請先選取主題');
+            if (!state.course) return alert('請先選取上方主題');
             if (!confirm(`確定預約 ${startTime.replace('T', ' ')} 嗎？`)) return;
             startLoad();
             const res = await (await fetch(`${GAS_URL}?action=submitBooking&name=${state.rawName}&course=${state.course}&startTime=${startTime}&userId=${state.userId}`)).json();
-            if (res.status === 'success') showSuccess('預約成功，已同步至日曆。');
+            if (res.status === 'success') showSuccess('個人課程預約已完成。');
         }
 
         async function doCancel(eventId) {
             if (!confirm('確定取消這堂課嗎？')) return;
             startLoad();
             const res = await (await fetch(`${GAS_URL}?action=cancelBooking&eventId=${eventId}&userId=${state.userId}`)).json();
-            if (res.status === 'success') showSuccess('預約已成功取消。');
+            if (res.status === 'success') showSuccess('預約取消成功。');
         }
 
         async function adminBatchAction(type, tplIdx = null) {
             if (!state.selectedMonday) return;
             const mondayStr = state.selectedMonday.toISOString().split('T')[0];
             let url = `${GAS_URL}?action=`;
-            if (type === 'four_weeks') { if (!confirm('確定連續套用 Week 1-4 模板？')) return; url += `batchSchedule&type=four_weeks&startDate=${mondayStr}`; }
+            if (type === 'four_weeks') { if (!confirm('確定從此週開始連續套用 Week 1-4 模板？')) return; url += `batchSchedule&type=four_weeks&startDate=${mondayStr}`; }
             else if (type === 'delete_four') {
-                if (!confirm('將連續刪除四週紀錄，確定？')) return;
+                if (!confirm('確定要連續刪除四週的紀錄嗎？')) return;
                 const weeks = []; for(let i=0; i<4; i++) { let d = new Date(state.selectedMonday); d.setDate(state.selectedMonday.getDate() + (i*7)); weeks.push(d.toISOString().split('T')[0]); }
                 url += `batchDelete&weeks=${weeks.join(',')}`;
             } else if (type === 'single') { url += `batchSchedule&type=single&startDate=${mondayStr}&templateIdx=${tplIdx}`; }

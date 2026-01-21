@@ -7,8 +7,9 @@
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .calendar-cell { min-height: 80px; }
+        .calendar-cell { min-height: 85px; }
         .month-separator { grid-column: span 7; }
+        .event-tag { font-size: 8px; line-height: 1.2; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans">
@@ -22,39 +23,76 @@
         </div>
 
         <div id="page-content" class="hidden">
-            <!-- 1. 預約/查詢 視圖 (原本的代碼內容，略) -->
-            <div id="view-calendar" class="hidden">...</div>
+            <!-- 1. 預約/查詢 視圖 -->
+            <div id="view-calendar" class="hidden">
+                <div class="bg-white rounded-[2rem] p-6 shadow-sm mb-4 border border-slate-100">
+                    <h1 id="calendar-title" class="text-xl font-black text-slate-800">課表查詢</h1>
+                    <p id="user-info-cal" class="text-blue-600 text-sm font-bold mt-1"></p>
+                </div>
 
-            <!-- 2. 管理員批次載入視圖 -->
+                <div id="course-section" class="bg-white rounded-[2rem] p-6 shadow-sm mb-4 hidden border border-slate-100">
+                    <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">1. 選擇預約主題</h2>
+                    <div id="course-list" class="space-y-2"></div>
+                </div>
+
+                <div id="calendar-container" class="bg-white rounded-[2rem] p-5 shadow-sm mb-4 border border-slate-100 overflow-hidden">
+                    <h2 id="calendar-step-text" class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">排課狀況</h2>
+                    <div class="grid grid-cols-7 gap-1 text-center mb-2">
+                        <div class="text-slate-300 font-bold py-1 text-[10px]">一</div>
+                        <div class="text-slate-300 font-bold py-1 text-[10px]">二</div>
+                        <div class="text-slate-300 font-bold py-1 text-[10px]">三</div>
+                        <div class="text-slate-300 font-bold py-1 text-[10px]">四</div>
+                        <div class="text-slate-300 font-bold py-1 text-[10px]">五</div>
+                        <div class="text-red-300 font-bold py-1 text-[10px]">六</div>
+                        <div class="text-red-300 font-bold py-1 text-[10px]">日</div>
+                    </div>
+                    <div id="calendar" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+                    <div id="day-detail" class="mt-6 pt-6 border-t border-slate-50 hidden">
+                        <p id="selected-date-text" class="text-sm font-black text-slate-700 mb-4"></p>
+                        <div id="time-slots" class="grid grid-cols-1 gap-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 管理員視圖 -->
             <div id="view-admin" class="hidden">
                 <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 text-center mb-6">
                     <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
                     <h1 class="text-xl font-black text-slate-800">批次載入工具</h1>
-                    <p class="text-slate-400 text-sm mt-1">根據「課程模板」自動填入 4 週課表</p>
+                    <p class="text-slate-400 text-sm mt-1">自動填入 4 週課表</p>
                 </div>
-
                 <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">第一步：選擇第一週的週一日期</label>
-                    <input type="date" id="start-monday" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-700 mb-8 focus:ring-2 focus:ring-blue-500">
-                    
-                    <button id="btn-run-batch" class="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all">
-                        開始預先載入整月課表
-                    </button>
-                    
-                    <p class="text-center text-[10px] text-slate-300 mt-6 leading-relaxed">執行後系統會自動同步 Google 日曆<br>並更新所有醫師的查詢畫面</p>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">第一週的週一日期</label>
+                    <input type="date" id="start-monday" class="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-700 mb-8">
+                    <button id="btn-run-batch" class="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all">開始預先載入</button>
                 </div>
+            </div>
+
+            <!-- 3. 個人管理視圖 -->
+            <div id="view-modify" class="hidden">
+                <div class="bg-white rounded-[2.5rem] p-8 shadow-sm mb-4 text-center border border-slate-100">
+                    <h1 class="text-xl font-black text-slate-800">管理預約</h1>
+                    <p id="user-info-modify" class="text-blue-600 text-sm font-bold mt-1"></p>
+                </div>
+                <div id="record-list" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
-    <!-- 成功提示 (原本的 modal，略) -->
+    <!-- Modals (Action, Success) 略，請保留原本 HTML 內容 -->
+    <div id="success-modal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-[40px] p-10 w-full max-w-xs text-center shadow-2xl">
+            <h3 class="text-xl font-black mb-4 text-green-600">操作成功</h3>
+            <button onclick="liff.closeWindow()" class="w-full bg-slate-900 text-white py-4 rounded-3xl font-bold">返回 LINE</button>
+        </div>
+    </div>
 
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxUW6ITFsZVr10gLxqxIoYp33ni3ZggBDmoDWSuRbqPTn5SKTe70KvMk_J3T0-ZsNpz/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
-        let state = { userId: null, currentAction: null };
+        let state = { userId: null, name: '', course: null, date: null, allEvents: [], currentAction: null };
 
         async function init() {
             await liff.init({ liffId: LIFF_ID });
@@ -65,37 +103,109 @@
             const urlParams = new URLSearchParams(window.location.search);
             state.currentAction = urlParams.get('action');
 
+            const [userRes, eventRes] = await Promise.all([
+                fetch(`${GAS_URL}?action=getUserData&userId=${state.userId}`),
+                fetch(`${GAS_URL}?action=getAllEvents`)
+            ]);
+            const userData = await userRes.json();
+            state.allEvents = await eventRes.json();
+            state.name = userData.name;
+
             if (state.currentAction === 'admin') {
                 document.getElementById('view-admin').classList.remove('hidden');
                 initAdmin();
+            } else if (state.currentAction === 'modify') {
+                document.getElementById('view-modify').classList.remove('hidden');
+                renderModifyView();
             } else {
-                // 原本的 renderCalendarView 等初始化邏輯
+                renderCalendarView(userData, state.currentAction === 'book');
             }
             
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('page-content').classList.remove('hidden');
         }
 
+        function renderCalendarView(data, isBookMode) {
+            document.getElementById('view-calendar').classList.remove('hidden');
+            document.getElementById('calendar-title').textContent = isBookMode ? "預約新課程" : "全體課表查詢";
+            document.getElementById('user-info-cal').textContent = `${data.name} 醫師`;
+            if (isBookMode) {
+                document.getElementById('course-section').classList.remove('hidden');
+                const list = document.getElementById('course-list'); list.innerHTML = '';
+                data.courses.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-4 border-2 border-slate-50 rounded-2xl font-bold text-slate-600 transition-all";
+                    btn.textContent = c;
+                    btn.onclick = () => {
+                        state.course = c;
+                        document.getElementById('calendar-container').classList.remove('opacity-30', 'pointer-events-none');
+                        list.querySelectorAll('button').forEach(b => b.classList.replace('border-blue-500', 'border-slate-50'));
+                        btn.classList.replace('border-slate-50', 'border-blue-500');
+                    };
+                    list.appendChild(btn);
+                });
+                document.getElementById('calendar-container').classList.add('opacity-30', 'pointer-events-none');
+            }
+            renderCalendar(isBookMode);
+        }
+
+        function renderCalendar(isBookMode) {
+            const container = document.getElementById('calendar'); container.innerHTML = '';
+            const today = new Date(); let lastMonth = today.getMonth();
+            const getAdjustedDay = (d) => (d.getDay() + 6) % 7;
+            const startOffset = getAdjustedDay(today);
+            for (let i = 0; i < startOffset; i++) container.appendChild(document.createElement('div'));
+
+            for (let i = 0; i < 35; i++) {
+                const d = new Date(today); d.setDate(today.getDate() + i);
+                const currentMonth = d.getMonth();
+                if (i > 0 && currentMonth !== lastMonth) {
+                    const sep = document.createElement('div');
+                    sep.className = "month-separator py-4 text-[10px] font-black text-slate-400 tracking-widest bg-slate-50/50 rounded-xl my-2";
+                    sep.textContent = `--- ${d.getFullYear()}年 ${currentMonth + 1}月 ---`;
+                    container.appendChild(sep);
+                    const offset = getAdjustedDay(d);
+                    for (let j = 0; j < offset; j++) container.appendChild(document.createElement('div'));
+                }
+                lastMonth = currentMonth;
+                const dateStr = d.toISOString().split('T')[0];
+                const dayEvents = state.allEvents.filter(e => e.start.startsWith(dateStr));
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                const cell = document.createElement('div');
+                cell.className = `calendar-cell p-1 border-[0.5px] border-slate-50 rounded-xl flex flex-col items-center ${isWeekend ? 'bg-slate-100/50 text-slate-200' : 'bg-white cursor-pointer hover:bg-slate-50 shadow-sm'}`;
+                cell.innerHTML = `<span class="text-[9px] mb-1 font-bold">${d.getDate()}</span>`;
+                if (dayEvents.length > 0 && !isWeekend) {
+                    const box = document.createElement('div');
+                    box.className = "w-full space-y-0.5 mt-auto";
+                    dayEvents.forEach(ev => {
+                        const h = new Date(ev.start).getHours();
+                        const match = ev.title.match(/\((.*?)\)/);
+                        const doc = match ? match[1].replace('醫師','') : '師';
+                        box.innerHTML += `<div class="event-tag bg-blue-50 text-blue-600 px-1 py-0.5 rounded truncate text-left">${h}h ${doc}</div>`;
+                    });
+                    cell.appendChild(box);
+                }
+                if (!isWeekend) cell.onclick = () => selectDate(dateStr, cell, dayEvents, isBookMode);
+                container.appendChild(cell);
+            }
+        }
+
         function initAdmin() {
             document.getElementById('btn-run-batch').onclick = async () => {
                 const date = document.getElementById('start-monday').value;
                 if (!date) return alert('請先選擇起始週一日期');
-                if (!confirm(`系統將根據模板從 ${date} 開始排課 28 天，確定執行？`)) return;
-
+                if (!confirm(`確定從 ${date} 開始載入模板課表？`)) return;
                 document.getElementById('loading').classList.remove('hidden');
                 const res = await fetch(`${GAS_URL}?action=batchLoadTemplate&startMonday=${date}`);
                 const result = await res.json();
-                
                 document.getElementById('loading').classList.add('hidden');
                 if (result.status === 'success') {
-                    alert(`✨ 成功！已自動排入 ${result.count} 門課程。`);
-                    liff.closeWindow();
-                } else {
-                    alert('發生錯誤：' + result.message);
-                }
+                    document.getElementById('success-modal').classList.replace('hidden', 'flex');
+                } else alert('錯誤：' + result.message);
             };
         }
 
+        // 其餘 selectDate, submitBooking, renderModifyView 等邏輯與之前相同，請保留。
         window.onload = init;
     </script>
 </body>

@@ -146,7 +146,7 @@
             ]);
             const userData = await userRes.json();
             state.allEvents = await eventRes.json();
-            state.name = userData.name || '訪客';
+            state.name = (userData.name || '訪客').trim();
             state.userCourses = userData.courses || [];
             document.getElementById('user-info').textContent = `${state.name} 醫師`;
         }
@@ -198,6 +198,15 @@
             });
         }
 
+        function parseEventTitle(title) {
+            // 解析 "課程名稱(醫師姓名)" 格式
+            const match = title.match(/(.*)\((.*)\)/);
+            if (match) {
+                return { course: match[1].trim(), doctor: match[2].trim() };
+            }
+            return { course: title.trim(), doctor: '' };
+        }
+
         function renderCalendar() {
             const container = document.getElementById('calendar');
             container.innerHTML = '';
@@ -228,13 +237,16 @@
                 if (events.length > 0 && !isWeekend) {
                     events.forEach(e => {
                         const h = new Date(e.start).getHours();
-                        const doc = e.title.split('(')[1]?.replace(')','') || '';
+                        const info = parseEventTitle(e.title);
                         
-                        // 辨識是否為自己的課程：檢查標題是否包含 (我的姓名)
-                        const isMyEvent = e.title.includes(`(${state.name})`);
+                        // 辨識是否為自己的課程
+                        const isMyEvent = info.doctor === state.name;
                         const eventClass = isMyEvent ? 'my-event-bg' : 'bg-blue-100 text-blue-600';
                         
-                        el.innerHTML += `<div class="text-[7px] leading-tight rounded-md px-1 py-0.5 mb-0.5 w-full truncate text-left font-black ${eventClass}">${h}h ${doc}</div>`;
+                        // 顯示格式：醫師姓名(課程名稱)
+                        const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
+                        
+                        el.innerHTML += `<div class="text-[7px] leading-tight rounded-md px-1 py-0.5 mb-0.5 w-full truncate text-left font-black ${eventClass}">${h}h ${displayLabel}</div>`;
                     });
                 }
                 el.onclick = () => handleDateClick(d, el, events);
@@ -291,10 +303,10 @@
             tc.innerHTML = '';
             [9, 10, 11, 13, 14, 15, 16].forEach(h => {
                 const booked = events.find(e => new Date(e.start).getHours() === h);
-                const isMyEvent = booked && booked.title.includes(`(${state.name})`);
+                const info = booked ? parseEventTitle(booked.title) : null;
+                const isMyEvent = info && info.doctor === state.name;
                 
                 const row = document.createElement('div');
-                // 背景色判斷：若為本人課程套用紫色邊框
                 const rowClass = booked ? (isMyEvent ? 'my-event-border' : 'border-blue-100 bg-blue-50/30') : 'border-slate-50 bg-white';
                 row.className = `w-full p-5 rounded-3xl border-2 flex justify-between items-center font-black text-sm ${rowClass}`;
                 
@@ -306,8 +318,8 @@
                     else actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`;
                 } else if (state.action === 'modify') {
                     if (booked) {
-                        infoLabel = `<span class="${isMyEvent ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${booked.title}</span>`;
-                        // 權限判斷：僅本人的課程顯示取消按鈕
+                        const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
+                        infoLabel = `<span class="${isMyEvent ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${displayLabel}</span>`;
                         if (isMyEvent) {
                             actionBtn = `<button onclick="doCancel('${booked.id}')" class="my-event-btn px-5 py-2 rounded-xl text-xs font-black">取消</button>`;
                         } else {
@@ -317,9 +329,9 @@
                         actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`;
                     }
                 } else {
-                    // 查詢模式
                     if (booked) {
-                        infoLabel = `<span class="${isMyEvent ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${booked.title}</span>`;
+                        const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
+                        infoLabel = `<span class="${isMyEvent ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${displayLabel}</span>`;
                     }
                     actionBtn = `<span class="text-slate-400 text-[10px] font-bold">${booked ? (isMyEvent ? '我的課程' : '已排課') : '尚無課程'}</span>`;
                 }

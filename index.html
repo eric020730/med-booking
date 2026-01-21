@@ -16,11 +16,11 @@
         .day-cell { @apply min-h-[85px] border border-slate-50 rounded-xl p-1 flex flex-col items-center relative transition-all; }
         .is-today { @apply border-blue-500 border-2; }
         
-        /* 紫色高亮樣式 (使用者本人的課程) */
-        .my-event-bg { @apply bg-purple-100 text-purple-600 !important; }
-        .my-event-border { @apply border-purple-200 bg-purple-50 !important; }
-        .my-event-text { @apply text-purple-700 !important; }
-        .my-event-btn { @apply bg-purple-600 text-white shadow-purple-100 !important; }
+        /* 紫色高亮樣式 (使用者本人的課程) - 確保樣式與藍色課程一致 */
+        .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
+        .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
+        .my-event-text { color: #7e22ce !important; }
+        .my-event-btn { background-color: #9333ea !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.1) !important; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
@@ -148,8 +148,8 @@
             state.allEvents = await eventRes.json();
             
             state.rawName = userData.name || '訪客';
-            // 重要：清除姓名中的職稱與所有空格用於比對
-            state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '');
+            // 清理姓名用於比對
+            state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '').trim();
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "").filter(c => c !== "");
             
             document.getElementById('user-info').textContent = `${state.rawName} 醫師`;
@@ -204,30 +204,33 @@
 
         /**
          * 強健標題解析：判斷哪部分是醫師，哪部分是課程
+         * 系統預期格式為: 課程名稱(醫師姓名)
          */
         function parseEventTitle(title) {
             const match = title.match(/(.*)\((.*)\)/);
             if (match) {
-                let p1 = match[1].trim();
-                let p2 = match[2].trim();
+                let p_course = match[1].trim(); 
+                let p_doctor = match[2].trim(); 
                 
-                // 清理標籤內容以便比對
-                const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, '');
-                const cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
+                const cleanDocPart = p_doctor.replace(/\s+/g, '').replace(/醫師/g, '');
+                const cleanSelf = state.name;
                 
-                // 如果 p2 是我，或者 p1 是我列出的課程
-                if (cp2 === state.name || state.userCourses.includes(p1)) {
-                    return { course: p1, doctor: p2, isMine: (cp2 === state.name) };
-                } 
-                // 如果 p1 是我
-                if (cp1 === state.name) {
-                    return { course: p2, doctor: p1, isMine: true };
-                }
+                // 判斷是否為我的課程
+                const isMine = (cleanDocPart === cleanSelf);
                 
-                // 他人的課程，預設 P1 是課程，P2 是醫師
-                return { course: p1, doctor: p2, isMine: false };
+                return { course: p_course, doctor: p_doctor, isMine: isMine };
             }
             return { course: title.trim(), doctor: '', isMine: false };
+        }
+
+        /**
+         * 統一格式化顯示：姓名(課程名稱)
+         */
+        function getDisplayLabel(info) {
+            if (info.doctor) {
+                return `${info.doctor}(${info.course})`;
+            }
+            return info.course;
         }
 
         function renderCalendar() {
@@ -263,7 +266,8 @@
                         const info = parseEventTitle(e.title);
                         
                         const eventClass = info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-600';
-                        const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
+                        // 使用姓名(課程)格式
+                        const displayLabel = getDisplayLabel(info);
                         
                         el.innerHTML += `<div class="text-[7px] leading-tight rounded-md px-1 py-0.5 mb-0.5 w-full truncate text-left font-black ${eventClass}">${h}h ${displayLabel}</div>`;
                     });
@@ -330,14 +334,21 @@
                 row.className = `w-full p-5 rounded-3xl border-2 flex justify-between items-center font-black text-sm ${rowClass}`;
                 
                 let actionBtn = '';
-                let infoLabel = `<span>${h}:00 時段</span>`;
+                let infoLabel = `<span class="text-slate-400 font-normal">${h}:00 時段</span>`;
 
                 if (state.action === 'book') {
-                    if (!booked) actionBtn = `<button onclick="doBooking('${dateStr}T${String(h).padStart(2,'0')}:00:00')" class="text-white bg-blue-600 px-5 py-2 rounded-xl text-xs shadow-lg shadow-blue-100">預約</button>`;
-                    else actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`;
+                    if (booked) {
+                        // 預約模式下若已被預約，顯示課程資訊 (姓名(課程)) 與 狀態
+                        const displayLabel = getDisplayLabel(info);
+                        infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${displayLabel}</span>`;
+                        actionBtn = `<span class="text-slate-300 text-[10px]">已被預約</span>`;
+                    } else {
+                        // 空閒時段
+                        actionBtn = `<button onclick="doBooking('${dateStr}T${String(h).padStart(2,'0')}:00:00')" class="text-white bg-blue-600 px-5 py-2 rounded-xl text-xs shadow-lg shadow-blue-100">預約</button>`;
+                    }
                 } else if (state.action === 'modify') {
                     if (booked) {
-                        const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
+                        const displayLabel = getDisplayLabel(info);
                         infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${displayLabel}</span>`;
                         if (isMine) {
                             actionBtn = `<button onclick="doCancel('${booked.id}')" class="my-event-btn px-5 py-2 rounded-xl text-xs font-black">取消</button>`;
@@ -348,8 +359,9 @@
                         actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`;
                     }
                 } else {
+                    // 查詢模式 (view)
                     if (booked) {
-                        const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
+                        const displayLabel = getDisplayLabel(info);
                         infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${displayLabel}</span>`;
                     }
                     actionBtn = `<span class="text-slate-400 text-[10px] font-bold">${booked ? (isMine ? '我的課程' : '已排課') : '尚無課程'}</span>`;

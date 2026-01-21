@@ -79,7 +79,7 @@
                     <span id="mode-badge" class="bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-black"></span>
                 </div>
                 
-                <!-- 課程主題選擇 (僅預約模式) -->
+                <!-- 課程主題選擇 -->
                 <div id="course-selector" class="mb-6 hidden">
                     <div id="course-list" class="grid grid-cols-2 gap-2"></div>
                 </div>
@@ -116,7 +116,7 @@
             allEvents: [], 
             course: null,
             selectedMonday: null,
-            userCourses: [] // 儲存表單中對應的 <課程1> 和 <課程2>
+            userCourses: []
         };
 
         async function init() {
@@ -146,8 +146,8 @@
             ]);
             const userData = await userRes.json();
             state.allEvents = await eventRes.json();
+            // 正規化姓名：去除所有空格與"醫師"
             state.name = (userData.name || '訪客').trim();
-            // userData.courses 包含 [課程1, 課程2]
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "");
             document.getElementById('user-info').textContent = `${state.name} 醫師`;
         }
@@ -200,7 +200,6 @@
         }
 
         function parseEventTitle(title) {
-            // 解析試算表寫入的 "課程名稱(醫師姓名)" 格式
             const match = title.match(/(.*)\((.*)\)/);
             if (match) {
                 return { course: match[1].trim(), doctor: match[2].trim() };
@@ -208,9 +207,15 @@
             return { course: title.trim(), doctor: '' };
         }
 
-        function isMyCourse(info) {
-            // 判斷條件：1. 醫師姓名匹配 且 2. 課程名稱在我的授課清單內
-            return info.doctor === state.name && state.userCourses.includes(info.course);
+        /**
+         * 核心辨識邏輯：比對姓名是否匹配
+         * 包含自動剔除 "醫師" 與空格的模糊比對
+         */
+        function isMyEventLogic(doctorName) {
+            if (!doctorName || !state.name) return false;
+            const cleanTarget = doctorName.replace(/\s+/g, '').replace(/醫師/g, '');
+            const cleanSelf = state.name.replace(/\s+/g, '').replace(/醫師/g, '');
+            return cleanTarget === cleanSelf;
         }
 
         function renderCalendar() {
@@ -245,11 +250,10 @@
                         const h = new Date(e.start).getHours();
                         const info = parseEventTitle(e.title);
                         
-                        // 辨識我的課程
-                        const myEvent = isMyCourse(info);
+                        const myEvent = isMyEventLogic(info.doctor);
                         const eventClass = myEvent ? 'my-event-bg' : 'bg-blue-100 text-blue-600';
                         
-                        // 顯示格式：醫師姓名(課程名稱)
+                        // 格式：醫師姓名(課程名稱)
                         const displayLabel = info.doctor ? `${info.doctor}(${info.course})` : info.course;
                         
                         el.innerHTML += `<div class="text-[7px] leading-tight rounded-md px-1 py-0.5 mb-0.5 w-full truncate text-left font-black ${eventClass}">${h}h ${displayLabel}</div>`;
@@ -310,7 +314,7 @@
             [9, 10, 11, 13, 14, 15, 16].forEach(h => {
                 const booked = events.find(e => new Date(e.start).getHours() === h);
                 const info = booked ? parseEventTitle(booked.title) : null;
-                const myEvent = info ? isMyCourse(info) : false;
+                const myEvent = info ? isMyEventLogic(info.doctor) : false;
                 
                 const row = document.createElement('div');
                 const rowClass = booked ? (myEvent ? 'my-event-border' : 'border-blue-100 bg-blue-50/30') : 'border-slate-50 bg-white';

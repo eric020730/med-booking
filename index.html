@@ -111,13 +111,13 @@
         
         let state = { 
             userId: null, 
-            name: '', // 清理後的姓名（用於比對）
+            name: '', // 比對用姓名
             rawName: '', // 原始姓名
             action: 'view', 
             allEvents: [], 
             course: null,
             selectedMonday: null,
-            userCourses: [] // 儲存此使用者的課程1與課程2
+            userCourses: [] 
         };
 
         async function init() {
@@ -148,7 +148,7 @@
             state.allEvents = await eventRes.json();
             
             state.rawName = (userData.name || '訪客').trim();
-            // 清理姓名：移除空格與"醫師"字眼，用於核心辨識
+            // 比對邏輯：移除空格與「醫師」
             state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '');
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "").filter(c => c !== "");
             
@@ -157,32 +157,13 @@
 
         function setupModeUI() {
             const title = document.getElementById('page-title');
-            const inst = document.getElementById('instruction-text');
             const badge = document.getElementById('mode-badge');
+            const inst = document.getElementById('instruction-text');
             
-            switch(state.action) {
-                case 'admin':
-                    title.textContent = "排課管理控制台";
-                    inst.textContent = "點擊任一天以選取該週";
-                    badge.textContent = "管理模式";
-                    break;
-                case 'book':
-                    title.textContent = "預約新課程";
-                    inst.textContent = "1. 選主題 2. 點日期";
-                    badge.textContent = "預約模式";
-                    document.getElementById('course-selector').classList.remove('hidden');
-                    renderCourseButtons();
-                    break;
-                case 'modify':
-                    title.textContent = "課程更動與取消";
-                    inst.textContent = "點擊紫色課程進行管理";
-                    badge.textContent = "修改模式";
-                    break;
-                default:
-                    title.textContent = "醫影部課表查詢";
-                    inst.textContent = "點擊日期查看時段";
-                    badge.textContent = "查詢模式";
-            }
+            if (state.action === 'admin') { title.textContent = "排課管理控制台"; badge.textContent = "管理模式"; inst.textContent = "點擊任一天"; }
+            else if (state.action === 'book') { title.textContent = "預約新課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); }
+            else if (state.action === 'modify') { title.textContent = "課程更動與取消"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色課程"; }
+            else { title.textContent = "醫影部課表查詢"; badge.textContent = "查詢模式"; inst.textContent = "點擊日期查看"; }
         }
 
         function renderCourseButtons() {
@@ -207,34 +188,30 @@
          */
         function parseEventTitle(title) {
             const match = title.match(/(.*)\((.*)\)/);
-            let doc = '';
-            let course = '';
-            
             if (match) {
                 let p1 = match[1].trim(); 
                 let p2 = match[2].trim(); 
                 const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, '');
                 const cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
                 
-                // 辨識邏輯：
-                // 1. 如果 P1 或 P2 匹配登入者姓名
-                // 2. 或者 P1 或 P2 匹配此登入者的專屬課程名稱
-                const isP1Mine = (cp1 === state.name || state.userCourses.includes(p1));
-                const isP2Mine = (cp2 === state.name || state.userCourses.includes(p2));
+                // 判斷邏輯：
+                // 1. 任一部分匹配登入者姓名
+                // 2. 或者任一部分包含於使用者的專屬課程清單中
+                const isNameMatch = (cp1 === state.name || cp2 === state.name);
+                const isCourseMatch = state.userCourses.some(myC => p1.includes(myC) || p2.includes(myC));
                 
-                // 根據您的需求：醫師在前，課程在後
-                // 判斷哪一部分是醫師 (通常含有"醫師"字眼或是匹配姓名者)
+                const isMine = isNameMatch || isCourseMatch;
+
+                // 判斷醫師姓名部分 (含有"醫師"字眼或匹配姓名者)
                 const p1IsDoc = p1.includes('醫師') || cp1 === state.name;
+                let doc = p1IsDoc ? p1 : p2;
+                let course = p1IsDoc ? p2 : p1;
                 
-                doc = p1IsDoc ? p1 : p2;
-                course = p1IsDoc ? p2 : p1;
-                
-                // 確保醫師姓名格式正確
                 if (!doc.includes('醫師')) doc += '醫師';
 
                 return { 
                     display: `${doc}(${course})`, 
-                    isMine: (isP1Mine || isP2Mine),
+                    isMine: isMine,
                     id: null 
                 };
             }
@@ -315,6 +292,7 @@
                 const info = booked ? parseEventTitle(booked.title) : null;
                 const isMine = info ? info.isMine : false;
                 const row = document.createElement('div');
+                // 重點：確保所有模式下我的課程都套用紫色邊框樣式
                 const rowClass = booked ? (isMine ? 'my-event-border' : 'border-blue-100 bg-blue-50/30') : 'border-slate-50 bg-white';
                 row.className = `w-full p-5 rounded-3xl border-2 flex justify-between items-center font-black text-sm ${rowClass}`;
                 
@@ -337,7 +315,10 @@
                         actionBtn = `<span class="text-slate-200 text-[10px]">無課程</span>`;
                     }
                 } else {
-                    if (booked) infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
+                    // 查詢模式 (view)
+                    if (booked) {
+                        infoLabel = `<span class="${isMine ? 'my-event-text' : 'text-slate-800'} text-xs">${h}:00 ${info.display}</span>`;
+                    }
                     actionBtn = `<span class="text-slate-400 text-[10px] font-bold">${booked ? (isMine ? '我的課程' : '已排課') : '尚無課程'}</span>`;
                 }
                 row.innerHTML = `${infoLabel} ${actionBtn}`;

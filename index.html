@@ -16,7 +16,6 @@
         .day-cell { @apply min-h-[85px] border border-slate-50 rounded-xl p-1 flex flex-col items-center relative transition-all; }
         .is-today { @apply border-blue-500 border-2; }
         
-        /* 修正紫色樣式：紫色字體 + 淺紫色背景，造型與藍色課程完全一致 */
         .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
         .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
@@ -25,27 +24,25 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
     <div id="app" class="max-w-md mx-auto p-4 pb-40">
-        <!-- 讀取遮罩 -->
         <div id="loading" class="fixed inset-0 bg-white/90 flex flex-col items-center justify-center z-50">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
             <p class="text-slate-500 font-bold text-sm">正在同步系統資料...</p>
         </div>
 
         <div id="page-content" class="hidden">
-            <!-- 綁定介面 (未綁定時自動顯示) -->
-            <div id="view-binding" class="hidden space-y-6 pt-10">
-                <div class="text-center px-4">
-                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">👤</div>
+            <!-- 綁定介面：已加入滾動與完整清單載入 -->
+            <div id="view-binding" class="hidden space-y-6 pt-6">
+                <div class="text-center px-4 mb-8">
+                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">👤</div>
                     <h2 class="text-2xl font-black text-slate-800">身分辨識</h2>
-                    <p class="text-slate-400 text-sm mt-3 leading-relaxed">我們無法確認您的身分，<br>請在下方選擇您的姓名以綁定系統。</p>
+                    <p class="text-slate-400 text-xs mt-2 leading-relaxed">請在下方名單中選擇您的姓名以綁定系統</p>
                 </div>
-                <div id="binding-list" class="grid grid-cols-1 gap-3 px-2">
-                    <!-- 動態載入姓名按鈕 -->
+                <div id="binding-list" class="grid grid-cols-1 gap-3 px-2 overflow-y-auto max-h-[60vh] pb-10">
+                    <!-- 此處會載入所有姓名 -->
                 </div>
-                <p class="text-center text-[10px] text-slate-300 pb-10">若名單中沒有您的姓名，請聯絡系統管理員。</p>
             </div>
 
-            <!-- 主功能介面 (已綁定時顯示) -->
+            <!-- 主功能介面 -->
             <div id="view-main" class="hidden">
                 <header class="text-center mb-6 pt-2">
                     <h1 id="page-title" class="text-xl font-black tracking-tight text-slate-800">醫影部教學系統</h1>
@@ -105,7 +102,7 @@
         </div>
     </div>
 
-    <!-- 成功提示彈窗 -->
+    <!-- 成功彈窗 -->
     <div id="modal-success" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center p-6 z-[70] backdrop-blur-sm">
         <div class="bg-white rounded-[40px] p-10 w-full max-w-xs text-center shadow-2xl">
             <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
@@ -116,7 +113,7 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw970RFX-TNhLPi71lawnLhe8lnUZVplaNqZIx7RVZv1aGJo_6A-gUGJX7mk9gqCwvGXA/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw-sLzZyrz3at-nUrEczLvhSADTRsITo5-yt_g51rDp0bOfpb1OqVYqt3RaqCS8Buasrg/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
         
         let state = { 
@@ -134,16 +131,13 @@
 
                 await refreshData();
 
-                // 核心邏輯：判斷姓名是否存在
-                if (state.name === '訪客' || !state.name || state.name === "") {
+                // 判斷是否需要進行身分綁定
+                if (!state.name || state.name === '訪客' || state.name === "") {
                     await showBindingView();
                 } else {
                     showMainView();
                 }
-            } catch (e) { 
-                console.error(e);
-                alert("系統初始化失敗，請重新開啟。");
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function refreshData() {
@@ -154,12 +148,10 @@
             const userData = await userRes.json();
             state.allEvents = await eventRes.json();
             state.rawName = (userData.name || '訪客').trim();
-            // 正規化姓名比對用：移除空白與職稱
             state.name = state.rawName.replace(/\s+/g, '').replace(/醫師/g, '');
             state.userCourses = (userData.courses || []).map(c => c ? c.trim() : "").filter(c => c !== "");
         }
 
-        // 顯示綁定視圖
         async function showBindingView() {
             document.getElementById('loading').classList.remove('hidden');
             const res = await fetch(`${GAS_URL}?action=getAllUserNames`);
@@ -169,12 +161,12 @@
             list.innerHTML = '';
             
             if (names.length === 0) {
-                list.innerHTML = '<p class="text-center text-slate-400 py-10">找不到可供綁定的醫師名單。</p>';
+                list.innerHTML = '<p class="text-center text-slate-400 py-10">試算表中目前沒有任何醫師名單。</p>';
             } else {
                 names.forEach(n => {
                     const btn = document.createElement('button');
-                    btn.className = "w-full p-4 bg-white border-2 border-slate-100 rounded-3xl font-black text-slate-700 shadow-sm active:bg-blue-50 active:border-blue-300 active:scale-95 transition-all text-left flex justify-between items-center";
-                    btn.innerHTML = `<span>我是 ${n} 醫師</span> <span class="text-blue-400 text-xs">點擊綁定 ➔</span>`;
+                    btn.className = "w-full p-5 bg-white border-2 border-slate-100 rounded-3xl font-black text-slate-700 shadow-sm active:bg-blue-50 active:border-blue-300 active:scale-95 transition-all text-left flex justify-between items-center";
+                    btn.innerHTML = `<span>我是 ${n} 醫師</span> <span class="bg-blue-600 text-white p-1 rounded-full px-3 text-[10px]">選取</span>`;
                     btn.onclick = () => doBind(n);
                     list.appendChild(btn);
                 });
@@ -191,7 +183,6 @@
             const res = await fetch(`${GAS_URL}?action=bindUser&userId=${state.userId}&name=${encodeURIComponent(name)}`);
             const result = await res.json();
             if(result.status === 'success') {
-                alert('綁定成功！即將進入教學系統。');
                 location.reload();
             }
         }
@@ -204,6 +195,8 @@
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('page-content').classList.remove('hidden');
         }
+
+        // --- 以下為原有日曆邏輯 (已包含「姓名醫師(課程)」格式優化) ---
 
         function setupModeUI() {
             const title = document.getElementById('page-title');
@@ -239,16 +232,11 @@
                 let p2 = match[2].trim(); 
                 const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, '');
                 const cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
-                
-                // 比對本人身分
                 const isMine = (cp1 === state.name || cp2 === state.name || state.userCourses.includes(p1) || state.userCourses.includes(p2));
-                
-                // 找出醫師與課程部分
                 const p1IsDoc = p1.includes('醫師') || cp1 === state.name;
                 let doc = p1IsDoc ? p1 : p2;
                 let course = p1IsDoc ? p2 : p1;
                 if (!doc.includes('醫師')) doc += '醫師';
-                
                 return { display: `${doc}(${course})`, isMine: isMine };
             }
             return { display: title.trim(), isMine: false };
@@ -351,11 +339,11 @@
         }
 
         async function doBooking(startTime) {
-            if (!state.course) return alert('請先選取上方主題');
+            if (!state.course) return alert('請先選取主題');
             if (!confirm(`確定預約 ${startTime.replace('T', ' ')} 嗎？`)) return;
             startLoad();
             const res = await (await fetch(`${GAS_URL}?action=submitBooking&name=${state.rawName}&course=${state.course}&startTime=${startTime}&userId=${state.userId}`)).json();
-            if (res.status === 'success') showSuccess('個人課程預約已完成。');
+            if (res.status === 'success') showSuccess('預約成功，已同步至日曆。');
         }
 
         async function doCancel(eventId) {

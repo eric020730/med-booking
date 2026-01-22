@@ -11,26 +11,26 @@
         .btn-primary { @apply btn-main bg-blue-600 text-white shadow-blue-100; }
         .btn-secondary { @apply btn-main bg-slate-100 text-slate-600; }
         
-        /* 五日制放大月曆格子 - 調整寬度以容納左側週次 */
+        /* 五日制放大月曆格子 */
         .day-cell { @apply min-h-[140px] border border-slate-50 rounded-[2.5rem] p-3 flex flex-col items-center relative transition-all bg-white cursor-pointer; }
         
-        /* 當天日期簡單標示 */
+        /* 當天日期簡單標示：藍色圓圈與背景 */
         .is-today-dot { @apply bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg; }
-        .is-today-cell { @apply bg-blue-50/30 border-blue-200 border-2; }
+        .is-today-cell { @apply bg-blue-50/50 border-blue-200 border-2; }
         
         .week-highlight { @apply ring-4 ring-blue-500/50 bg-blue-50 z-10 scale-105; }
         
         /* 左側週次標籤樣式 */
-        .week-index-label { @apply flex items-center justify-center text-[10px] font-black text-blue-500 bg-blue-50/50 rounded-2xl my-2 px-1 text-center leading-tight h-[130px]; }
+        .week-index-label { @apply flex items-center justify-center text-[10px] font-black text-blue-500 bg-blue-50/30 rounded-2xl my-2 px-1 text-center leading-tight h-[130px]; }
         
-        /* 紫色高亮樣式 (我的課程) */
-        .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
+        /* 紫色高亮樣式 (使用者本人的課程) */
+        .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; border: 1px solid #e9d5ff; }
         .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
         .my-event-btn { background-color: #9333ea !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.2) !important; }
 
-        /* 過去課程淡化 */
-        .past-event { opacity: 0.35; filter: grayscale(0.5); }
+        /* 過去課程淡化：降低透明度與灰階 */
+        .past-event { opacity: 0.3; filter: grayscale(0.8); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 antialiased">
@@ -55,8 +55,8 @@
             <!-- 主功能介面 -->
             <div id="view-main" class="hidden">
                 <header class="text-center mb-8 pt-4">
-                    <h1 id="page-title" class="text-2xl font-black tracking-tighter text-slate-900">醫影部教學系統</h1>
-                    <p id="user-info" class="text-blue-600 text-sm font-black mt-2 bg-blue-50 inline-block px-5 py-1.5 rounded-full"></p>
+                    <h1 id="page-title" class="text-2xl font-black tracking-tighter text-slate-900 text-center">醫影部教學系統</h1>
+                    <p id="user-info" class="text-blue-600 text-sm font-black mt-2 bg-blue-50 inline-block px-5 py-1.5 rounded-full text-center mx-auto"></p>
                 </header>
 
                 <!-- 管理員面板 -->
@@ -90,18 +90,18 @@
                         <div class="flex items-center gap-3">
                             <span id="instruction-text" class="bg-slate-100 px-3 py-1 rounded-lg italic">Cloud Sync</span>
                             <div class="flex items-center gap-1.5">
-                                <span class="w-3 h-3 bg-purple-500 rounded-full"></span>
+                                <span class="w-3 h-3 bg-purple-500 rounded-full shadow-sm"></span>
                                 <span class="text-[11px] normal-case font-black text-purple-600">我的課程</span>
                             </div>
                         </div>
-                        <span id="mode-badge" class="bg-blue-600 px-4 py-1.5 rounded-full text-white font-black"></span>
+                        <span id="mode-badge" class="bg-blue-600 px-4 py-1.5 rounded-full text-white font-black text-[10px]"></span>
                     </div>
                     
                     <div id="course-selector" class="mb-10 hidden px-2">
                         <div id="course-list" class="grid grid-cols-1 gap-3"></div>
                     </div>
 
-                    <!-- 月曆主體 (5+1 欄制：左側週次 + 週一至週五) -->
+                    <!-- 月曆主體 (5+1 欄制：左側週次標籤 + 週一至週五) -->
                     <div id="calendar" class="grid grid-cols-[45px_repeat(5,1fr)] gap-3 text-center"></div>
                     
                     <!-- 時段詳情 -->
@@ -120,7 +120,7 @@
             <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8 text-3xl">✓</div>
             <h3 class="text-2xl font-black mb-4 text-slate-800">處理完成</h3>
             <p id="success-msg" class="text-slate-500 mb-10 text-base"></p>
-            <button onclick="closeSuccessModal()" class="w-full py-5 rounded-[2rem] font-black bg-slate-900 text-white shadow-xl active:scale-95 transition-all">關閉</button>
+            <button onclick="closeSuccessModal()" class="w-full py-5 rounded-[2rem] font-black bg-slate-900 text-white shadow-xl active:scale-95 transition-all">關閉視窗</button>
         </div>
     </div>
 
@@ -166,7 +166,7 @@
             names.forEach(n => {
                 const btn = document.createElement('button');
                 btn.className = "w-full p-6 bg-white border-2 border-slate-100 rounded-[2rem] font-black text-slate-700 shadow-sm active:bg-blue-50 transition-all text-left flex justify-between items-center";
-                btn.innerHTML = `<span class="text-lg">我是 ${n} 醫師</span> <span class="bg-blue-600 text-white px-5 py-2 rounded-full text-xs">選取</span>`;
+                btn.innerHTML = `<span class="text-lg">我是 ${n} 醫師</span> <span class="bg-blue-600 text-white px-5 py-2 rounded-full text-xs">綁定</span>`;
                 btn.onclick = () => doBind(n);
                 list.appendChild(btn);
             });
@@ -196,9 +196,9 @@
             const title = document.getElementById('page-title');
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            if (state.action === 'admin') { title.textContent = "排課後台"; badge.textContent = "管理員"; inst.textContent = "請點選日期"; }
-            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "請點選預約"; }
-            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色取消"; }
+            if (state.action === 'admin') { title.textContent = "排課後台"; badge.textContent = "管理員"; inst.textContent = "點選日期選週"; }
+            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "點選日期時段"; }
+            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色時段取消"; }
             else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點選日期詳情"; }
         }
 
@@ -239,10 +239,8 @@
             const container = document.getElementById('calendar');
             container.innerHTML = '';
             
-            // 1. 產生 Header
-            const headerEmpty = document.createElement('div'); // 週次欄標題空白
-            container.appendChild(headerEmpty);
-
+            // 產生 Header
+            container.appendChild(document.createElement('div'));
             ['一','二','三','四','五'].forEach(w => {
                 const h = document.createElement('div');
                 h.className = "text-slate-400 py-6 font-black text-lg tracking-widest";
@@ -252,15 +250,17 @@
 
             const today = new Date();
             const todayStr = today.toISOString().split('T')[0];
-            const nowTime = today.getTime();
+            const yesterdayDate = new Date();
+            yesterdayDate.setDate(today.getDate() - 1);
+            yesterdayDate.setHours(23, 59, 59, 999);
+            const yesterdayTime = yesterdayDate.getTime();
             
             const currentDay = today.getDay(); 
             const diffToMonday = (currentDay === 0 ? -6 : 1 - currentDay);
             const startMonday = new Date(today.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
 
-            // 2. 產生 Body
+            // 產生月曆內容
             for (let week = 0; week < 6; week++) {
-                // 檢查該週是否有課程
                 const weekDates = [];
                 for (let day = 0; day < 5; day++) {
                     const d = new Date(startMonday.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
@@ -268,27 +268,25 @@
                 }
                 const hasEventsInWeek = state.allEvents.some(e => weekDates.includes(e.start.split('T')[0]));
 
-                // 左側週次標籤：若沒課程就不顯示文字
                 const weekMark = document.createElement('div');
                 if (hasEventsInWeek) {
                     weekMark.className = "week-index-label";
-                    weekMark.innerHTML = `<W${week+1}<br>課程>`;
+                    weekMark.innerHTML = `W${week+1}<br>課程`;
                 }
                 container.appendChild(weekMark);
 
-                // 平日五天
                 for (let day = 0; day < 5; day++) {
                     const d = new Date(startMonday.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
                     const dateStr = d.toISOString().split('T')[0];
                     const isToday = (dateStr === todayStr);
-                    const isPast = (d.getTime() < nowTime && !isToday);
+                    const isPastDay = (d.getTime() < yesterdayTime);
 
                     const events = state.allEvents.filter(e => e.start.startsWith(dateStr));
                     const el = document.createElement('div');
                     el.dataset.date = dateStr;
                     el.className = `day-cell ${isToday ? 'is-today-cell' : ''}`;
                     
-                    // 日期數字標示
+                    // 日期數字標示 (今天顯示藍色圓圈)
                     const dateNum = document.createElement('span');
                     dateNum.className = `text-2xl mb-4 font-black ${isToday ? 'is-today-dot' : 'text-slate-800'}`;
                     dateNum.textContent = d.getDate();
@@ -298,7 +296,8 @@
                         events.forEach(e => {
                             const info = parseEventTitle(e.title);
                             const eventDiv = document.createElement('div');
-                            eventDiv.className = `text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPast ? 'past-event' : ''}`;
+                            // 應用 past-event 樣式
+                            eventDiv.className = `text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPastDay ? 'past-event' : ''}`;
                             eventDiv.textContent = `${new Date(e.start).getHours()}h ${info.display}`;
                             el.appendChild(eventDiv);
                         });
@@ -376,7 +375,7 @@
         }
 
         async function doCancel(eventId) {
-            if (!confirm('確定取消此教學時段嗎？')) return;
+            if (!confirm('確定取消此教學時段嗎？取消後該時段將變為空閒。')) return;
             startLoad();
             const res = await (await fetch(`${GAS_URL}?action=cancelBooking&eventId=${eventId}&userId=${state.userId}`)).json();
             if (res.status === 'success') showSuccess('預約已取消，時段已釋出。');

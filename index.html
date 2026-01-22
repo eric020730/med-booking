@@ -14,9 +14,11 @@
         /* 5+1 欄制月曆格子 */
         .day-cell { @apply min-h-[140px] border border-slate-50 rounded-[2rem] p-2 flex flex-col items-center relative transition-all bg-white cursor-pointer; }
         
-        /* 簡化今日標示：藍色邊框與文字 */
-        .is-today-dot { @apply border-2 border-blue-600 text-blue-600 rounded-full w-10 h-10 flex items-center justify-center font-black mx-auto; }
-        .is-today-cell { @apply bg-blue-50/30; }
+        /* 今日標示：藍色實心圓圈，白色文字，視覺重心極其明確 */
+        .is-today-dot { @apply bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-black mx-auto shadow-md; }
+        
+        /* 當天格位背景：淺藍色背景輔以藍色邊框 */
+        .is-today-cell { @apply bg-blue-50 border-blue-200 border-2 !important; }
         
         .week-highlight { @apply ring-4 ring-blue-500/50 bg-blue-50 z-10 scale-105; }
         
@@ -30,8 +32,8 @@
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
         .my-event-btn { background-color: #9333ea !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.2) !important; }
         
-        /* 過去課程淡化 */
-        .past-event { opacity: 0.3 !important; filter: grayscale(0.6); }
+        /* 過去課程淡化：透明度 35% 並帶有 80% 灰階 */
+        .past-event { opacity: 0.35 !important; filter: grayscale(0.8); }
 
         ::-webkit-scrollbar { width: 0px; }
     </style>
@@ -104,7 +106,7 @@
                         <div id="course-list" class="grid grid-cols-1 gap-3"></div>
                     </div>
 
-                    <!-- 月曆主體 (調整為 6 欄制：週次標示 + 一至五) -->
+                    <!-- 月曆主體 (6 欄制：週次標示 + 一至五) -->
                     <div id="calendar" class="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr] gap-2 text-center"></div>
                     
                     <!-- 時段詳情 -->
@@ -271,20 +273,18 @@
             const startMonday = new Date(today.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
 
             for (let week = 0; week < 6; week++) {
-                // 本週日期範圍計算
                 const weekMon = new Date(startMonday.getTime() + (week * 7) * 24 * 60 * 60 * 1000);
                 const weekFri = new Date(weekMon.getTime() + 4 * 24 * 60 * 60 * 1000);
                 
-                // 檢查該週是否有任何排課 (用於左側標籤顯示)
+                // 檢查該週是否有課程
                 const hasEventsInWeek = state.allEvents.some(e => {
                     const ed = new Date(e.start);
                     return ed >= weekMon && ed <= new Date(weekFri.getTime() + 23*60*60*1000);
                 });
 
-                // 新增左側週次標示
+                // 左側週次標示
                 const weekLabel = document.createElement('div');
                 weekLabel.className = `week-label-col ${hasEventsInWeek ? 'week-label-active' : ''}`;
-                // 簡單邏輯：如果有課程，則標示為第幾週 (以 4 週一循環模擬)
                 if (hasEventsInWeek) {
                     weekLabel.innerHTML = `<span class="opacity-80">W${(week % 4) + 1}課程</span>`;
                 }
@@ -296,13 +296,14 @@
                     const events = state.allEvents.filter(e => toLocalISOString(new Date(e.start)) === dateStr);
                     
                     const isToday = (dateStr === todayStr);
-                    const isPast = (d < today && !isToday);
+                    // 系統自動判斷時間：早於今天（不含今天）
+                    const isPast = (d < today);
 
                     const el = document.createElement('div');
                     el.dataset.date = dateStr;
                     el.className = `day-cell ${isToday ? 'is-today-cell' : ''}`;
                     
-                    // 簡化今日標示
+                    // 日期顯示
                     el.innerHTML = `<div class="mb-3 flex items-center justify-center">
                         <div class="${isToday ? 'is-today-dot' : 'text-slate-800 text-xl font-black'}">
                             ${d.getDate()}
@@ -312,6 +313,7 @@
                     events.forEach(e => {
                         const info = parseEventTitle(e.title);
                         const h = new Date(e.start).getHours();
+                        // 套用過去課程淡化樣式
                         el.innerHTML += `<div class="text-[9px] leading-tight rounded-lg px-1.5 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-50 text-blue-600'} ${isPast ? 'past-event' : ''}">${h}h ${info.display}</div>`;
                     });
 

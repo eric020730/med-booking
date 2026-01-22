@@ -11,26 +11,24 @@
         .btn-primary { @apply btn-main bg-blue-600 text-white shadow-blue-100; }
         .btn-secondary { @apply btn-main bg-slate-100 text-slate-600; }
         
-        /* 日曆單元格基礎樣式 */
-        .day-cell { @apply min-h-[130px] border border-slate-50 rounded-[2.5rem] p-3 flex flex-col items-center relative transition-all bg-white cursor-pointer shadow-sm; }
+        /* 保持原本格子大小感 */
+        .day-cell { @apply min-h-[110px] border border-slate-50 rounded-[1.5rem] p-2 flex flex-col items-center relative transition-all bg-white cursor-pointer shadow-sm; }
         
-        /* 當天日期的簡約標示：數字背景藍圓 */
-        .today-marker { @apply bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center; }
+        /* 當天日期標示：藍色小圓圈 */
+        .today-circle { @apply bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mb-2; }
+        .date-num { @apply text-xl font-black text-slate-800 mb-2; }
         
-        /* 過去日期的淡化樣式 */
-        .past-date { @apply opacity-30 grayscale-[0.2]; }
+        /* 過去日期淡化 */
+        .past-date { @apply opacity-40 grayscale-[0.3]; }
         
         .week-highlight { @apply ring-4 ring-blue-500/50 bg-blue-50 z-10 scale-105; }
         
         /* 課程標籤樣式 */
         .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
-        .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
-        .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
-        .my-event-btn { background-color: #9333ea !important; color: white !important; }
+        .bg-blue-100 { background-color: #dbeafe !important; color: #1e40af !important; }
 
-        /* 週次標籤樣式 */
-        .week-label { @apply flex items-center justify-center text-slate-400 font-bold text-[10px] h-full; }
-        .week-label-text { @apply transform -rotate-0 text-center leading-tight; }
+        /* 左側週次欄位 */
+        .week-col-label { @apply flex items-center justify-center text-slate-300 font-bold text-[9px] text-center leading-tight; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 antialiased">
@@ -38,23 +36,13 @@
         <!-- 載入動畫 -->
         <div id="loading" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
             <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 mb-6"></div>
-            <p class="text-slate-600 font-black text-lg">同步日曆中...</p>
+            <p class="text-slate-600 font-black text-lg">同步系統中...</p>
         </div>
 
         <div id="page-content" class="hidden">
-            <!-- 綁定介面 -->
-            <div id="view-binding" class="hidden space-y-8 pt-10 px-2">
-                <div class="text-center mb-10">
-                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl">👤</div>
-                    <h2 class="text-3xl font-black">身分辨識</h2>
-                    <p class="text-slate-400 mt-2">請選擇您的姓名以綁定系統</p>
-                </div>
-                <div id="binding-list" class="grid grid-cols-1 gap-4 overflow-y-auto max-h-[65vh] pb-20"></div>
-            </div>
-
             <!-- 主功能介面 -->
             <div id="view-main" class="hidden">
-                <header class="text-center mb-8 pt-4">
+                <header class="text-center mb-6 pt-4">
                     <h1 id="page-title" class="text-2xl font-black text-slate-900">醫影部教學系統</h1>
                     <p id="user-info" class="text-blue-600 text-sm font-black mt-2 bg-blue-50 inline-block px-5 py-1.5 rounded-full"></p>
                 </header>
@@ -77,36 +65,41 @@
                     </div>
                 </div>
 
-                <div id="calendar-container" class="bg-white rounded-[3rem] p-4 shadow-xl mb-6 border border-slate-100">
-                    <div class="text-xs font-black text-slate-400 uppercase mb-6 flex justify-between items-center px-2">
+                <div id="calendar-container" class="bg-white rounded-[2.5rem] p-4 shadow-xl mb-6 border border-slate-100">
+                    <div class="text-xs font-black text-slate-400 uppercase mb-6 flex justify-between items-center px-1">
                         <span id="instruction-text">載入中...</span>
-                        <span id="mode-badge" class="bg-blue-600 px-4 py-1.5 rounded-full text-white font-black"></span>
+                        <span id="mode-badge" class="bg-blue-600 px-3 py-1 rounded-full text-white font-black text-[10px]"></span>
                     </div>
                     
-                    <div id="course-selector" class="mb-8 hidden px-2">
-                        <div id="course-list" class="grid grid-cols-1 gap-3"></div>
+                    <!-- 課程選取 (預約模式) -->
+                    <div id="course-selector" class="mb-6 hidden">
+                        <div id="course-list" class="grid grid-cols-1 gap-2"></div>
                     </div>
 
-                    <!-- 月曆主體：調整為 6 欄 (週次寬度固定 40px，其餘 5 欄平分) -->
-                    <div id="calendar" class="grid grid-cols-[40px_repeat(5,1fr)] gap-2 text-center"></div>
+                    <!-- 月曆主體：6欄式 (週次欄30px + 五個平分欄位) -->
+                    <div id="calendar" class="grid grid-cols-[30px_repeat(5,1fr)] gap-1 text-center"></div>
                     
                     <!-- 時段詳情 -->
-                    <div id="day-detail" class="mt-12 pt-10 border-t-2 border-slate-50 hidden">
-                        <h3 id="selected-date-text" class="text-2xl font-black text-slate-800 mb-8 px-2"></h3>
-                        <div id="time-slots" class="space-y-4"></div>
+                    <div id="day-detail" class="mt-10 pt-8 border-t-2 border-slate-50 hidden">
+                        <h3 id="selected-date-text" class="text-xl font-black text-slate-800 mb-6 px-2"></h3>
+                        <div id="time-slots" class="space-y-3"></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- 綁定介面 (略) -->
+            <div id="view-binding" class="hidden pt-10 px-4">
+                <div id="binding-list" class="grid grid-cols-1 gap-4"></div>
             </div>
         </div>
     </div>
 
     <!-- 成功彈窗 -->
     <div id="modal-success" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-6 z-[70] backdrop-blur-md">
-        <div class="bg-white rounded-[3rem] p-12 w-full max-w-sm text-center shadow-2xl scale-105">
-            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8 text-3xl">✓</div>
-            <h3 class="text-2xl font-black mb-4">操作成功</h3>
-            <p id="success-msg" class="text-slate-500 mb-10 text-base"></p>
-            <button onclick="closeSuccessModal()" class="w-full py-5 rounded-[2rem] font-black bg-slate-900 text-white">關閉</button>
+        <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-sm text-center shadow-2xl">
+            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
+            <p id="success-msg" class="text-slate-800 font-black mb-8"></p>
+            <button onclick="closeSuccessModal()" class="w-full py-4 rounded-2xl font-black bg-slate-900 text-white">確認</button>
         </div>
     </div>
 
@@ -155,10 +148,10 @@
             const container = document.getElementById('calendar');
             container.innerHTML = '';
             
-            // 表頭：第一欄為空，後續為週一至週五
+            // Header
             container.innerHTML += `<div></div>`;
             ['一','二','三','四','五'].forEach(w => {
-                container.innerHTML += `<div class="text-slate-400 py-4 font-black text-lg">${w}</div>`;
+                container.innerHTML += `<div class="text-slate-400 py-3 font-black text-sm">${w}</div>`;
             });
 
             const now = new Date();
@@ -168,50 +161,41 @@
             startMonday.setHours(0,0,0,0);
 
             for (let week = 0; week < 6; week++) {
-                // 先計算這一週有沒有排課
-                let hasEventsInWeek = false;
-                const weekDates = [];
+                // 檢查該週是否有課程
+                let weekHasEvent = false;
                 for(let day = 0; day < 5; day++) {
-                    const tempDate = new Date(startMonday);
-                    tempDate.setDate(startMonday.getDate() + (week * 7) + day);
-                    const ds = formatDate(tempDate);
-                    weekDates.push(ds);
-                    if (state.allEvents.some(e => e.dateOnly === ds)) {
-                        hasEventsInWeek = true;
-                    }
+                    const temp = new Date(startMonday);
+                    temp.setDate(startMonday.getDate() + (week * 7) + day);
+                    if (state.allEvents.some(e => e.dateOnly === formatDate(temp))) { weekHasEvent = true; break; }
                 }
 
-                // 每一週的第一欄：顯示週次標籤（若該週無課則不顯示）
-                const weekLabelDiv = document.createElement('div');
-                weekLabelDiv.className = "week-label";
-                if (hasEventsInWeek) {
-                    weekLabelDiv.innerHTML = `<div class="week-label-text">W${week + 1}<br>課程</div>`;
-                }
-                container.appendChild(weekLabelDiv);
+                // 週次欄位
+                const weekLabel = document.createElement('div');
+                weekLabel.className = "week-col-label";
+                if (weekHasEvent) weekLabel.innerHTML = `W${week+1}<br>課程`;
+                container.appendChild(weekLabel);
                 
-                // 渲染週一至週五的內容
+                // 日期欄位
                 for (let day = 0; day < 5; day++) {
                     const d = new Date(startMonday);
                     d.setDate(startMonday.getDate() + (week * 7) + day);
-                    const dateStr = formatDate(d);
-                    const isToday = (dateStr === todayStr);
-                    const isPast = (d < new Date().setHours(0,0,0,0)); 
-                    
-                    const events = state.allEvents.filter(e => e.dateOnly === dateStr);
+                    const ds = formatDate(d);
+                    const isToday = (ds === todayStr);
+                    const isPast = (d < new Date().setHours(0,0,0,0));
+                    const events = state.allEvents.filter(e => e.dateOnly === ds);
                     
                     const el = document.createElement('div');
-                    el.dataset.date = dateStr;
+                    el.dataset.date = ds;
                     el.className = `day-cell ${isPast ? 'past-date' : ''}`;
                     
-                    // 日期數字呈現
-                    const dateDisplayClass = isToday ? 'today-marker' : 'text-slate-800';
-                    el.innerHTML = `<div class="text-2xl mb-4 font-black ${dateDisplayClass}">${d.getDate()}</div>`;
+                    // 日期顯示
+                    const dateInner = isToday ? `<div class="today-circle">${d.getDate()}</div>` : `<div class="date-num">${d.getDate()}</div>`;
+                    el.innerHTML = dateInner;
                     
                     events.forEach(e => {
                         const info = parseEventTitle(e.title);
                         const hour = e.start.split('T')[1].substring(0,2);
-                        // 過去日期的課程顯示較淡由父容器的 past-date 處理
-                        el.innerHTML += `<div class="text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'}">${hour}h ${info.display}</div>`;
+                        el.innerHTML += `<div class="text-[8px] leading-tight rounded-md px-1 py-0.5 mb-0.5 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100'}">${hour}h ${info.display}</div>`;
                     });
 
                     el.onclick = () => handleDateClick(d, el, events);
@@ -223,23 +207,19 @@
         function setupModeUI() {
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            const title = document.getElementById('page-title');
-            if (state.action === 'admin') { title.textContent = "排課後台"; badge.textContent = "管理員"; inst.textContent = "點擊任一天選取週次"; }
-            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "選取主題後點日期"; }
-            else if (state.action === 'modify') { title.textContent = "更動取消"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色時段取消"; }
-            else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點擊日期查看詳情"; }
+            if (state.action === 'admin') { badge.textContent = "管理員"; inst.textContent = "選取週次排課"; }
+            else if (state.action === 'book') { badge.textContent = "預約"; inst.textContent = "選主題後點日期"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); }
+            else if (state.action === 'modify') { badge.textContent = "修改"; inst.textContent = "點紫色時段取消"; }
+            else { badge.textContent = "查詢"; inst.textContent = "點日期看課表"; }
         }
 
-        function formatDate(d) {
-            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        }
+        function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
         function parseEventTitle(title) {
             const match = title.match(/(.*)\((.*)\)/);
             if (match) {
-                let p1 = match[1].trim(); let p2 = match[2].trim();
-                const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, '');
-                const cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
+                let p1 = match[1].trim(), p2 = match[2].trim();
+                const cp1 = p1.replace(/\s+/g, '').replace(/醫師/g, ''), cp2 = p2.replace(/\s+/g, '').replace(/醫師/g, '');
                 const isMine = (cp1 === state.name || cp2 === state.name);
                 return { display: `${p1.includes('醫師') ? p1 : p2}(${p1.includes('醫師') ? p2 : p1})`, isMine: isMine };
             }
@@ -265,37 +245,85 @@
         }
 
         function showDayDetail(date, el, events) {
-            document.querySelectorAll('.day-cell').forEach(d => d.classList.remove('ring-8', 'ring-blue-500/10', 'z-10', 'scale-105'));
-            el.classList.add('ring-8', 'ring-blue-500/10', 'z-10', 'scale-105');
+            document.querySelectorAll('.day-cell').forEach(d => d.classList.remove('ring-4', 'ring-blue-100', 'z-10'));
+            el.classList.add('ring-4', 'ring-blue-100', 'z-10');
             const dateStr = formatDate(date);
             document.getElementById('day-detail').classList.remove('hidden');
-            document.getElementById('selected-date-text').textContent = dateStr + " 詳情";
+            document.getElementById('selected-date-text').textContent = dateStr + " 課程時段";
             const tc = document.getElementById('time-slots');
             tc.innerHTML = '';
             [9, 10, 11, 13, 14, 15, 16].forEach(h => {
                 const booked = events.find(e => parseInt(e.start.split('T')[1].substring(0,2)) === h);
                 const info = booked ? parseEventTitle(booked.title) : null;
                 const row = document.createElement('div');
-                row.className = `w-full p-6 rounded-[2rem] border-2 flex justify-between items-center font-black ${booked ? (info.isMine ? 'my-event-border' : 'bg-blue-50/20 border-blue-100') : 'bg-white border-slate-100'}`;
+                row.className = `w-full p-5 rounded-2xl border flex justify-between items-center font-black text-sm ${booked ? (info.isMine ? 'my-event-border' : 'bg-blue-50/20 border-blue-100') : 'bg-white border-slate-100'}`;
                 
-                let actionBtn = `<span class="text-slate-400 text-sm">空閒時段</span>`;
+                let actionBtn = `<span class="text-slate-300">空閒</span>`;
                 if (state.action === 'book') {
-                    actionBtn = booked ? `<span class="text-slate-300 text-xs">已被預約</span>` : `<button onclick="doBooking('${dateStr}T${String(h).padStart(2,'0')}:00:00')" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs">點擊預約</button>`;
+                    actionBtn = booked ? `<span class="text-slate-300">佔用</span>` : `<button onclick="doBooking('${dateStr}T${String(h).padStart(2,'0')}:00:00')" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs">預約</button>`;
                 } else if (state.action === 'modify' && booked && info.isMine) {
-                    actionBtn = `<button onclick="doCancel('${booked.id}')" class="my-event-btn px-6 py-2 rounded-xl text-xs">取消預約</button>`;
+                    actionBtn = `<button onclick="doCancel('${booked.id}')" class="bg-purple-600 text-white px-4 py-1.5 rounded-lg text-xs">取消</button>`;
                 }
-                
                 row.innerHTML = `<span>${h}:00 ${booked ? info.display : ''}</span> ${actionBtn}`;
                 tc.appendChild(row);
             });
             document.getElementById('day-detail').scrollIntoView({ behavior: 'smooth' });
         }
 
-        async function doBooking(time) { if(!state.course) return alert('請先選取授課主題'); if(confirm('確定預約此時段嗎？')){ startLoad(); const res = await (await fetch(`${GAS_URL}?action=submitBooking&name=${state.rawName}&course=${state.course}&startTime=${time}&userId=${state.userId}`)).json(); if(res.status==='success') showSuccess('預約成功，訊息已推送。'); } }
-        async function doCancel(id) { if(confirm('確定取消此課程嗎？')){ startLoad(); const res = await (await fetch(`${GAS_URL}?action=cancelBooking&eventId=${id}&userId=${state.userId}`)).json(); if(res.status==='success') showSuccess('已成功取消預約。'); } }
+        async function doBooking(time) { if(!state.course) return alert('請先選主題'); if(confirm('確定預約？')){ startLoad(); const res = await (await fetch(`${GAS_URL}?action=submitBooking&name=${state.rawName}&course=${state.course}&startTime=${time}&userId=${state.userId}`)).json(); if(res.status==='success') showSuccess('預約成功'); } }
+        async function doCancel(id) { if(confirm('確定取消？')){ startLoad(); const res = await (await fetch(`${GAS_URL}?action=cancelBooking&eventId=${id}&userId=${state.userId}`)).json(); if(res.status==='success') showSuccess('已取消'); } }
         function startLoad() { document.getElementById('loading').classList.remove('hidden'); }
         function showSuccess(msg) { document.getElementById('loading').classList.add('hidden'); document.getElementById('success-msg').textContent = msg; document.getElementById('modal-success').classList.replace('hidden', 'flex'); }
         async function closeSuccessModal() { location.reload(); }
+        
+        function renderCourseButtons() {
+            const container = document.getElementById('course-list');
+            container.innerHTML = '';
+            state.userCourses.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = "p-4 border rounded-2xl text-sm font-black transition-all text-slate-500 bg-white text-left";
+                btn.innerHTML = `授課主題：${c}`;
+                btn.onclick = () => {
+                    state.course = c;
+                    container.querySelectorAll('button').forEach(b => { b.classList.remove('border-blue-500','text-blue-600','bg-blue-50'); });
+                    btn.classList.add('border-blue-500','text-blue-600','bg-blue-50');
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        async function showBindingView() {
+            document.getElementById('loading').classList.remove('hidden');
+            const res = await (await fetch(`${GAS_URL}?action=getAllUserNames`)).json();
+            const list = document.getElementById('binding-list');
+            list.innerHTML = '';
+            res.forEach(n => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-5 bg-white border rounded-2xl font-black flex justify-between items-center";
+                btn.innerHTML = `<span>我是 ${n}</span> <span class="bg-blue-600 text-white px-4 py-1 rounded-lg text-xs">綁定</span>`;
+                btn.onclick = async () => { if(confirm(`綁定為 ${n}?`)) { startLoad(); await fetch(`${GAS_URL}?action=bindUser&userId=${state.userId}&name=${encodeURIComponent(n)}`); location.reload(); } };
+                list.appendChild(btn);
+            });
+            document.getElementById('view-binding').classList.remove('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('page-content').classList.remove('hidden');
+        }
+
+        async function adminBatchAction(type, tplIdx = null) {
+            if (!state.selectedMonday) return;
+            const mondayStr = formatDate(state.selectedMonday);
+            let url = `${GAS_URL}?action=`;
+            if (type === 'four_weeks') { if (!confirm('連排四週？')) return; url += `batchSchedule&type=four_weeks&startDate=${mondayStr}`; }
+            else if (type === 'single') { url += `batchSchedule&type=single&startDate=${mondayStr}&templateIdx=${tplIdx}`; }
+            else { if (!confirm('刪除該週？')) return; url += `batchDelete&weeks=${mondayStr}`; }
+            url += `&userId=${state.userId}`;
+            startLoad();
+            const res = await (await fetch(url)).json();
+            if (res.status === 'success') showSuccess('批次處理完成');
+        }
+
+        function clearSelection() { state.selectedMonday = null; document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('week-highlight')); document.getElementById('admin-panel').classList.add('hidden'); }
+
         window.onload = init;
     </script>
 </body>

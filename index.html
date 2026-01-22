@@ -205,7 +205,7 @@
             const title = document.getElementById('page-title');
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            if (state.action === 'admin') { title.textContent = "排課管理"; badge.textContent = "管理員"; inst.textContent = "點選日期選週"; }
+            if (state.action === 'admin') { title.textContent = "排課管理"; badge.textContent = "管理員"; inst.textContent = "點擊日期選週"; }
             else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "點選日期時段"; }
             else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色時段取消"; }
             else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點選日期詳情"; }

@@ -12,16 +12,13 @@
         .btn-primary { @apply btn-main bg-blue-600 text-white shadow-blue-200; }
         .btn-secondary { @apply btn-main bg-slate-100 text-slate-600; }
         
-        /* 月曆格子：五日制極致放大 */
+        /* 五日制極致放大月曆格子 */
         .day-cell { @apply min-h-[140px] border border-slate-50 rounded-[2.5rem] p-3 flex flex-col items-center relative transition-all bg-white cursor-pointer; }
         
-        /* 1. 今日日期標示：完美的藍色實心圓圈 */
-        .is-today-dot { @apply bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg mx-auto mb-2 font-black; }
+        /* 今日標示：藍色實心圓圈 */
+        .is-today-dot { @apply bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg mx-auto; }
         .is-today-cell { @apply bg-blue-50/50 border-blue-200 border-2; }
         
-        /* 2. 左側週次標籤樣式 (W1, W2...) */
-        .week-label-cell { @apply flex items-center justify-center text-[11px] font-black text-blue-500 bg-blue-50/40 rounded-2xl my-2 px-1 text-center leading-tight h-[110px] self-center; }
-
         .week-highlight { @apply ring-4 ring-blue-500/50 bg-blue-50 z-10 scale-105; }
         
         /* 紫色高亮樣式 (我的課程) */
@@ -41,25 +38,25 @@
         <!-- 載入動畫 -->
         <div id="loading" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
             <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 mb-6"></div>
-            <p class="text-slate-600 font-black text-lg">同步即時課表中...</p>
+            <p class="text-slate-600 font-black text-lg">讀取雲端日曆中...</p>
         </div>
 
         <div id="page-content" class="hidden">
             <!-- 綁定介面 -->
             <div id="view-binding" class="hidden space-y-8 pt-10 px-2">
                 <div class="text-center mb-10">
-                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner">👤</div>
+                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl">👤</div>
                     <h2 class="text-3xl font-black text-slate-800">身分辨識</h2>
-                    <p class="text-slate-400 text-base mt-2">請點選姓名以綁定系統</p>
+                    <p class="text-slate-400 text-base mt-2">請選擇您的姓名以綁定系統</p>
                 </div>
                 <div id="binding-list" class="grid grid-cols-1 gap-4 overflow-y-auto max-h-[65vh] pb-20"></div>
             </div>
 
-            <!-- 主介面 -->
+            <!-- 主功能介面 -->
             <div id="view-main" class="hidden">
                 <header class="text-center mb-8 pt-4">
-                    <h1 id="page-title" class="text-2xl font-black tracking-tighter text-slate-900 text-center">醫影部教學系統</h1>
-                    <p id="user-info" class="text-blue-600 text-sm font-black mt-2 bg-blue-50 inline-block px-5 py-1.5 rounded-full text-center mx-auto"></p>
+                    <h1 id="page-title" class="text-2xl font-black tracking-tighter text-slate-900">醫影部教學系統</h1>
+                    <p id="user-info" class="text-blue-600 text-sm font-black mt-2 bg-blue-50 inline-block px-5 py-1.5 rounded-full"></p>
                 </header>
 
                 <!-- 管理員面板 -->
@@ -67,8 +64,8 @@
                     <div class="max-w-md mx-auto">
                         <div class="flex justify-between items-center mb-6 px-2">
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">選取排課週次 (一~五)</span>
-                                <h3 id="selected-week-range" class="font-black text-slate-800 text-xl">請點選日期</h3>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">目前選取週次 (一~五)</span>
+                                <h3 id="selected-week-range" class="font-black text-slate-800 text-xl">請選取日期</h3>
                             </div>
                             <button onclick="clearSelection()" class="text-xs bg-slate-100 px-4 py-1.5 rounded-full text-slate-500 font-bold">重選</button>
                         </div>
@@ -91,7 +88,7 @@
                 <div id="calendar-container" class="bg-white rounded-[3rem] p-6 shadow-xl shadow-slate-100 mb-6 border border-slate-100">
                     <div id="calendar-instruction" class="text-xs font-black text-slate-400 uppercase mb-8 flex justify-between items-center px-2">
                         <div class="flex items-center gap-3">
-                            <span id="instruction-text" class="bg-slate-100 px-3 py-1 rounded-lg">Cloud Sync</span>
+                            <span id="instruction-text" class="bg-slate-100 px-3 py-1 rounded-lg">即時同步中</span>
                             <div class="flex items-center gap-1.5">
                                 <span class="w-3 h-3 bg-purple-500 rounded-full shadow-sm"></span>
                                 <span class="text-[11px] normal-case font-black text-purple-600">我的課程</span>
@@ -104,8 +101,8 @@
                         <div id="course-list" class="grid grid-cols-1 gap-3"></div>
                     </div>
 
-                    <!-- 月曆主體 (改為 6 欄：左側標籤 + 五日日期) -->
-                    <div id="calendar" class="grid grid-cols-[40px_repeat(5,1fr)] gap-2 text-center"></div>
+                    <!-- 月曆主體 (5 欄制) -->
+                    <div id="calendar" class="grid grid-cols-5 gap-3 text-center"></div>
                     
                     <!-- 時段詳情 -->
                     <div id="day-detail" class="mt-12 pt-10 border-t-2 border-slate-50 hidden">
@@ -133,6 +130,7 @@
         
         let state = { userId: null, name: '', rawName: '', action: 'view', allEvents: [], course: null, selectedMonday: null, userCourses: [], selectedDate: null };
 
+        // 輔助函數：取得本地時間的 YYYY-MM-DD (修復時差位移問題)
         function toLocalISOString(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -148,6 +146,7 @@
                 state.userId = profile.userId;
                 const params = new URLSearchParams(window.location.search);
                 state.action = params.get('action') || 'view';
+
                 await refreshData();
                 if (!state.name || state.name === '訪客' || state.name === "") { await showBindingView(); }
                 else { showMainView(); }
@@ -205,10 +204,10 @@
             const title = document.getElementById('page-title');
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            if (state.action === 'admin') { title.textContent = "排課管理"; badge.textContent = "管理員"; inst.textContent = "點擊日期選週"; }
-            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "點選日期時段"; }
-            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色時段取消"; }
-            else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點選日期詳情"; }
+            if (state.action === 'admin') { title.textContent = "排課管理"; badge.textContent = "管理員"; inst.textContent = "請點選週次"; }
+            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "點選日期預約"; }
+            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點選紫色時段取消"; }
+            else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點擊日期查看詳情"; }
         }
 
         function renderCourseButtons() {
@@ -247,9 +246,6 @@
         function renderCalendar() {
             const container = document.getElementById('calendar');
             container.innerHTML = '';
-            
-            // 標頭
-            container.appendChild(document.createElement('div')); // 空格給週標籤
             ['一','二','三','四','五'].forEach(w => {
                 const h = document.createElement('div');
                 h.className = "text-slate-400 py-6 font-black text-lg tracking-widest";
@@ -261,59 +257,41 @@
             today.setHours(0,0,0,0);
             const todayStr = toLocalISOString(today);
             
-            const currentDay = today.getDay(); 
-            const diffToMonday = (currentDay === 0 ? -6 : 1 - currentDay);
+            // 定位到本週週一
+            const dayOfWeek = today.getDay();
+            const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
             const startMonday = new Date(today.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
 
-            // 產生 6 週內容
             for (let week = 0; week < 6; week++) {
-                const weekDates = [];
-                for (let day = 0; day < 5; day++) {
-                    const d = new Date(startMonday.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
-                    weekDates.push(toLocalISOString(d));
-                }
-                
-                // 檢查該週是否有排課
-                const hasEventsInWeek = state.allEvents.some(e => weekDates.includes(toLocalISOString(new Date(e.start))));
-
-                // 第一欄：週次標籤 (僅在有排課時顯示)
-                const weekMark = document.createElement('div');
-                if (hasEventsInWeek) {
-                    weekMark.className = "week-label-cell";
-                    // 根據模版循環辨認 (W1-W4)
-                    const weekIdx = (week % 4) + 1; 
-                    weekMark.innerHTML = `W${weekIdx}`;
-                }
-                container.appendChild(weekMark);
-
                 for (let day = 0; day < 5; day++) {
                     const d = new Date(startMonday.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
                     const dateStr = toLocalISOString(d);
-                    const events = state.allEvents.filter(e => toLocalISOString(new Date(e.start)) === dateStr);
+                    
+                    // 從 GAS 回傳的 ISO 格式（UTC）中進行日期比對，需轉為本地日期比對
+                    const events = state.allEvents.filter(e => {
+                        const eventDate = new Date(e.start);
+                        return toLocalISOString(eventDate) === dateStr;
+                    });
+                    
                     const isToday = (dateStr === todayStr);
-                    const isPast = (d.getTime() < today.getTime());
+                    const isPast = (d < today && !isToday);
 
                     const el = document.createElement('div');
                     el.dataset.date = dateStr;
                     el.className = `day-cell ${isToday ? 'is-today-cell' : ''}`;
                     
-                    // 日期數字 (今日使用藍色實心圓圈)
-                    const dateNum = document.createElement('div');
-                    if (isToday) {
-                        dateNum.className = "is-today-dot text-2xl font-black";
-                    } else {
-                        dateNum.className = "text-slate-800 text-2xl font-black mb-4";
-                    }
-                    dateNum.textContent = d.getDate();
-                    el.appendChild(dateNum);
-
+                    // 今日標示圓圈
+                    el.innerHTML = `<div class="mb-4 flex items-center justify-center">
+                        <div class="${isToday ? 'is-today-dot text-2xl font-black' : 'text-slate-800 text-2xl font-black'}">
+                            ${d.getDate()}
+                        </div>
+                    </div>`;
+                    
                     if (events.length > 0) {
                         events.forEach(e => {
                             const info = parseEventTitle(e.title);
-                            const eventDiv = document.createElement('div');
-                            eventDiv.className = `text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPast ? 'past-event' : ''}`;
-                            eventDiv.textContent = `${new Date(e.start).getHours()}h ${info.display}`;
-                            el.appendChild(eventDiv);
+                            const eventTime = new Date(e.start).getHours();
+                            el.innerHTML += `<div class="text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPast ? 'past-event' : ''}">${eventTime}h ${info.display}</div>`;
                         });
                     }
                     el.onclick = () => handleDateClick(d, el, events);
@@ -385,11 +363,11 @@
             if (!confirm(`確定預約 ${startTime.replace('T', ' ')} 嗎？`)) return;
             startLoad();
             const res = await (await fetch(`${GAS_URL}?action=submitBooking&name=${state.rawName}&course=${state.course}&startTime=${startTime}&userId=${state.userId}`)).json();
-            if (res.status === 'success') showSuccess('預約完成，課程已同步。');
+            if (res.status === 'success') showSuccess('預約成功，已同步至雲端日曆。');
         }
 
         async function doCancel(eventId) {
-            if (!confirm('確定取消此教學時段嗎？取消後該時段將變為空閒。')) return;
+            if (!confirm('確定取消並釋放此教學時段嗎？取消後該時段將變為空閒。')) return;
             startLoad();
             const res = await (await fetch(`${GAS_URL}?action=cancelBooking&eventId=${eventId}&userId=${state.userId}`)).json();
             if (res.status === 'success') showSuccess('預約已取消，時段已釋出。');
@@ -401,7 +379,7 @@
             let url = `${GAS_URL}?action=`;
             if (type === 'four_weeks') { if (!confirm('確定連續套用 Week 1-4 模板？')) return; url += `batchSchedule&type=four_weeks&startDate=${mondayStr}`; }
             else if (type === 'delete_four') {
-                if (!confirm('將連續刪除四週紀錄，確定？')) return;
+                if (!confirm('將連續刪除四週日曆紀錄，確定？')) return;
                 const weeks = []; for(let i=0; i<4; i++) { let d = new Date(state.selectedMonday.getTime() + i*7*24*60*60*1000); weeks.push(toLocalISOString(d)); }
                 url += `batchDelete&weeks=${weeks.join(',')}`;
             } else if (type === 'single') { url += `batchSchedule&type=single&startDate=${mondayStr}&templateIdx=${tplIdx}`; }
@@ -419,7 +397,10 @@
             startLoad(); await refreshData(); renderCalendar();
             if (state.selectedDate) {
                 const dateStr = toLocalISOString(state.selectedDate);
-                const events = state.allEvents.filter(e => toLocalISOString(new Date(e.start)) === dateStr);
+                const events = state.allEvents.filter(e => {
+                    const eventDate = new Date(e.start);
+                    return toLocalISOString(eventDate) === dateStr;
+                });
                 const dayEl = document.querySelector(`.day-cell[data-date="${dateStr}"]`);
                 if (dayEl) showDayDetail(state.selectedDate, dayEl, events);
             }

@@ -7,31 +7,34 @@
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 整體字體與按鈕樣式 */
-        .btn-main { @apply w-full py-5 rounded-[2rem] font-black transition-all active:scale-95 disabled:opacity-50 disabled:scale-100 shadow-sm text-lg; }
+        /* 按鈕放大樣式 */
+        .btn-main { @apply w-full py-5 rounded-[2rem] font-black transition-all active:scale-95 disabled:opacity-50 disabled:scale-100 shadow-sm text-xl; }
         .btn-primary { @apply btn-main bg-blue-600 text-white shadow-blue-200; }
         .btn-secondary { @apply btn-main bg-slate-100 text-slate-600; }
         
-        /* 五日制極致放大月曆格子 */
-        .day-cell { @apply min-h-[145px] border border-slate-50 rounded-[2.5rem] p-3 flex flex-col items-center relative transition-all bg-white cursor-pointer; }
+        /* 月曆格子：固定寬度邏輯，防止被內容撐開 */
+        .day-cell { @apply min-h-[120px] border border-slate-50 rounded-2xl p-1.5 flex flex-col items-center relative transition-all bg-white cursor-pointer overflow-hidden; }
         
-        /* 今日標示：藍色實心圓圈 */
-        .is-today-circle { @apply bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg mx-auto mb-2 font-black; }
+        /* 1. 今日日期標示：藍色實心圓圈 */
+        .is-today-dot { @apply bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg mx-auto mb-1 font-black; }
         .is-today-cell { @apply bg-blue-50/50 border-blue-200 border-2; }
         
-        .week-highlight { @apply ring-4 ring-blue-500/50 bg-blue-50 z-10 scale-105; }
-        
-        /* 左側週次標籤 (W1, W2...) */
-        .week-label-cell { @apply flex items-center justify-center text-[11px] font-black text-blue-500 bg-blue-50/40 rounded-2xl my-2 px-1 text-center leading-tight h-[115px] self-center; }
+        /* 2. 左側週次標籤標示 */
+        .week-label-cell { @apply flex items-center justify-center text-[10px] font-black text-blue-500 bg-blue-50/50 rounded-xl my-1 px-0.5 text-center leading-tight h-[100px] self-center; }
 
-        /* 紫色高亮樣式 (使用者本人的課程) */
+        .week-highlight { @apply ring-4 ring-blue-500/30 bg-blue-50 z-10; }
+        
+        /* 紫色高亮樣式 (我的課程) */
         .my-event-bg { background-color: #f3e8ff !important; color: #7e22ce !important; }
         .my-event-border { border-color: #e9d5ff !important; background-color: #faf5ff !important; }
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
         .my-event-btn { background-color: #9333ea !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.2) !important; }
 
-        /* 過去課程淡化樣式 */
-        .past-event { opacity: 0.35; filter: grayscale(0.8); }
+        /* 過去課程淡化 */
+        .past-event { opacity: 0.3; filter: grayscale(0.9); }
+
+        /* 月曆內課程小標籤：極簡化 */
+        .calendar-event-tag { @apply text-[8px] leading-tight rounded px-1 py-0.5 mb-0.5 w-full truncate text-left font-bold; }
 
         ::-webkit-scrollbar { width: 0px; }
     </style>
@@ -40,24 +43,24 @@
     <div id="app" class="max-w-md mx-auto p-4 pb-40">
         <!-- 載入動畫 -->
         <div id="loading" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
-            <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 mb-6"></div>
-            <p class="text-slate-600 font-black text-lg">同步即時課表中...</p>
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mb-4"></div>
+            <p class="text-slate-600 font-black">讀取雲端日曆中...</p>
         </div>
 
         <div id="page-content" class="hidden">
             <!-- 綁定介面 -->
             <div id="view-binding" class="hidden space-y-8 pt-10 px-2">
                 <div class="text-center mb-10">
-                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner">👤</div>
+                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl">👤</div>
                     <h2 class="text-3xl font-black text-slate-800">身分辨識</h2>
-                    <p class="text-slate-400 text-base mt-2">請選擇您的姓名以綁定系統</p>
+                    <p class="text-slate-400 text-base mt-2">請點選您的姓名以進行綁定</p>
                 </div>
                 <div id="binding-list" class="grid grid-cols-1 gap-4 overflow-y-auto max-h-[65vh] pb-20"></div>
             </div>
 
-            <!-- 主功能介面 -->
+            <!-- 主介面 -->
             <div id="view-main" class="hidden">
-                <header class="text-center mb-8 pt-4">
+                <header class="text-center mb-6 pt-4">
                     <h1 id="page-title" class="text-2xl font-black tracking-tighter text-slate-900">醫影部教學系統</h1>
                     <p id="user-info" class="text-blue-600 text-sm font-black mt-2 bg-blue-50 inline-block px-5 py-1.5 rounded-full"></p>
                 </header>
@@ -65,22 +68,22 @@
                 <!-- 管理員面板 -->
                 <div id="admin-panel" class="fixed bottom-0 left-0 right-0 bg-white p-8 rounded-t-[3rem] shadow-[0_-20px_60px_rgba(0,0,0,0.1)] z-40 hidden border-t border-slate-100">
                     <div class="max-w-md mx-auto">
-                        <div class="flex justify-between items-center mb-6">
+                        <div class="flex justify-between items-center mb-6 px-2">
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">選取排課週次 (一~五)</span>
-                                <h3 id="selected-week-range" class="font-black text-slate-800 text-xl">請選取日期</h3>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">排課週次範疇</span>
+                                <h3 id="selected-week-range" class="font-black text-slate-800 text-xl">請點選日期</h3>
                             </div>
                             <button onclick="clearSelection()" class="text-xs bg-slate-100 px-4 py-1.5 rounded-full text-slate-500 font-bold">重選</button>
                         </div>
                         <div class="grid grid-cols-2 gap-4 mb-6">
-                            <button onclick="adminBatchAction('single', 1)" class="btn-secondary text-sm">套用 Week 1</button>
-                            <button onclick="adminBatchAction('single', 2)" class="btn-secondary text-sm">套用 Week 2</button>
-                            <button onclick="adminBatchAction('single', 3)" class="btn-secondary text-sm">套用 Week 3</button>
-                            <button onclick="adminBatchAction('single', 4)" class="btn-secondary text-sm">套用 Week 4</button>
+                            <button onclick="adminBatchAction('single', 1)" class="btn-secondary text-sm">Week 1</button>
+                            <button onclick="adminBatchAction('single', 2)" class="btn-secondary text-sm">Week 2</button>
+                            <button onclick="adminBatchAction('single', 3)" class="btn-secondary text-sm">Week 3</button>
+                            <button onclick="adminBatchAction('single', 4)" class="btn-secondary text-sm">Week 4</button>
                         </div>
                         <div class="flex flex-col gap-3">
                             <div class="flex gap-3">
-                                <button onclick="adminBatchAction('four_weeks')" class="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black text-sm shadow-lg shadow-emerald-100">新增連四週</button>
+                                <button onclick="adminBatchAction('four_weeks')" class="flex-1 bg-emerald-600 text-white py-5 rounded-[1.5rem] font-black text-sm">新增連四週</button>
                                 <button onclick="adminBatchAction('delete_four')" class="flex-1 bg-slate-800 text-white py-5 rounded-[1.5rem] font-black text-sm">連刪四週</button>
                             </div>
                             <button onclick="adminBatchAction('delete')" class="w-full bg-red-50 text-red-600 py-4 rounded-[1.5rem] font-black text-sm">刪除此週</button>
@@ -88,24 +91,24 @@
                     </div>
                 </div>
 
-                <div id="calendar-container" class="bg-white rounded-[3rem] p-6 shadow-xl shadow-slate-100 mb-6 border border-slate-100">
-                    <div id="calendar-instruction" class="text-xs font-black text-slate-400 uppercase mb-8 flex justify-between items-center px-2">
-                        <div class="flex items-center gap-3">
-                            <span id="instruction-text" class="bg-slate-100 px-3 py-1 rounded-lg">即時同步中</span>
+                <div id="calendar-container" class="bg-white rounded-[3rem] p-4 shadow-xl shadow-slate-100 mb-6 border border-slate-100">
+                    <div id="calendar-instruction" class="text-[10px] font-black text-slate-400 uppercase mb-6 flex justify-between items-center px-1">
+                        <div class="flex items-center gap-2">
+                            <span id="instruction-text" class="bg-slate-100 px-2 py-1 rounded-lg">Cloud Sync</span>
                             <div class="flex items-center gap-1.5">
-                                <span class="w-3 h-3 bg-purple-500 rounded-full shadow-sm"></span>
-                                <span class="text-[11px] normal-case font-black text-purple-600">我的課程</span>
+                                <span class="w-2.5 h-2.5 bg-purple-500 rounded-full"></span>
+                                <span class="text-purple-600">我的課程</span>
                             </div>
                         </div>
-                        <span id="mode-badge" class="bg-blue-600 px-4 py-1.5 rounded-full text-white font-black text-[10px]"></span>
+                        <span id="mode-badge" class="bg-blue-600 px-4 py-1 rounded-full text-white font-black text-[9px]"></span>
                     </div>
                     
-                    <div id="course-selector" class="mb-10 hidden px-2">
+                    <div id="course-selector" class="mb-8 hidden px-1">
                         <div id="course-list" class="grid grid-cols-1 gap-3"></div>
                     </div>
 
-                    <!-- 月曆主體 (改為 6 欄：左側標籤 + 五日日期) -->
-                    <div id="calendar" class="grid grid-cols-[40px_repeat(5,1fr)] gap-2 text-center"></div>
+                    <!-- 月曆主體 (固定比例，防止橫向滾動) -->
+                    <div id="calendar" class="grid grid-cols-[35px_repeat(5,1fr)] gap-1.5 text-center"></div>
                     
                     <!-- 時段詳情 -->
                     <div id="day-detail" class="mt-12 pt-10 border-t-2 border-slate-50 hidden">
@@ -123,7 +126,6 @@
         
         let state = { userId: null, name: '', rawName: '', action: 'view', allEvents: [], course: null, selectedMonday: null, userCourses: [], selectedDate: null };
 
-        // 輔助函數：取得本地時間的 YYYY-MM-DD (修復時差位移問題)
         function toLocalISOString(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -139,7 +141,6 @@
                 state.userId = profile.userId;
                 const params = new URLSearchParams(window.location.search);
                 state.action = params.get('action') || 'view';
-
                 await refreshData();
                 if (!state.name || state.name === '訪客' || state.name === "") { await showBindingView(); }
                 else { showMainView(); }
@@ -167,7 +168,7 @@
             names.forEach(n => {
                 const btn = document.createElement('button');
                 btn.className = "w-full p-6 bg-white border-2 border-slate-100 rounded-[2rem] font-black text-slate-700 shadow-sm active:bg-blue-50 transition-all text-left flex justify-between items-center";
-                btn.innerHTML = `<span class="text-lg">我是 ${n} 醫師</span> <span class="bg-blue-600 text-white px-5 py-2 rounded-full text-xs">選取</span>`;
+                btn.innerHTML = `<span class="text-lg">我是 ${n} 醫師</span> <span class="bg-blue-600 text-white px-5 py-2 rounded-full text-xs">綁定</span>`;
                 btn.onclick = () => doBind(n);
                 list.appendChild(btn);
             });
@@ -177,7 +178,7 @@
         }
 
         async function doBind(name) {
-            if(!confirm(`確定要將身分綁定為「${name}」嗎？`)) return;
+            if(!confirm(`確定要綁定身分為「${name}」嗎？`)) return;
             document.getElementById('loading').classList.remove('hidden');
             const res = await fetch(`${GAS_URL}?action=bindUser&userId=${state.userId}&name=${encodeURIComponent(name)}`);
             const result = await res.json();
@@ -197,10 +198,10 @@
             const title = document.getElementById('page-title');
             const badge = document.getElementById('mode-badge');
             const inst = document.getElementById('instruction-text');
-            if (state.action === 'admin') { title.textContent = "排課管理"; badge.textContent = "管理員"; inst.textContent = "點擊日期選週"; }
-            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "點選日期時段"; }
-            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點擊紫色時段取消"; }
-            else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點選日期詳情"; }
+            if (state.action === 'admin') { title.textContent = "排課後台"; badge.textContent = "管理員"; inst.textContent = "點日期選週範疇"; }
+            else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "選日期後點時段"; }
+            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改"; inst.textContent = "點紫色時段取消"; }
+            else { title.textContent = "全院課表"; badge.textContent = "查詢"; inst.textContent = "點日期詳情"; }
         }
 
         function renderCourseButtons() {
@@ -209,7 +210,7 @@
             state.userCourses.forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = "p-5 border-2 border-slate-100 rounded-3xl text-base font-black transition-all text-slate-500 bg-slate-50 text-left flex justify-between items-center";
-                btn.innerHTML = `<span>授課主題：${c}</span> <span class="w-6 h-6 border-2 border-slate-200 rounded-full"></span>`;
+                btn.innerHTML = `<span>主題：${c}</span> <span class="w-6 h-6 border-2 border-slate-200 rounded-full"></span>`;
                 btn.onclick = () => {
                     state.course = c;
                     container.querySelectorAll('button').forEach(b => { b.classList.replace('border-blue-500', 'border-slate-100'); b.classList.replace('text-blue-600', 'text-slate-500'); b.querySelector('span:last-child').classList.remove('bg-blue-600','border-blue-600'); });
@@ -236,16 +237,15 @@
             return { display: title.trim(), isMine: false };
         }
 
-        // 月曆渲染：包含 W1-W4 智慧標記與今日圓圈
         function renderCalendar() {
             const container = document.getElementById('calendar');
             container.innerHTML = '';
             
-            // 標頭渲染
-            container.appendChild(document.createElement('div')); // 空格(週標籤用)
+            // Header
+            container.appendChild(document.createElement('div'));
             ['一','二','三','四','五'].forEach(w => {
                 const h = document.createElement('div');
-                h.className = "text-slate-400 py-6 font-black text-lg tracking-widest";
+                h.className = "text-slate-400 py-4 font-black text-base";
                 h.textContent = w;
                 container.appendChild(h);
             });
@@ -265,22 +265,19 @@
                     weekDates.push(toLocalISOString(d));
                 }
                 
-                // 檢查該週是否有排課，以決定是否顯示 W1-W4
                 const hasEventsInWeek = state.allEvents.some(e => {
                     const eventDate = new Date(e.start);
                     return weekDates.includes(toLocalISOString(eventDate));
                 });
 
-                // 產生第一欄：週次標籤 (W1-W4 循環)
+                // 週次標籤
                 const weekMark = document.createElement('div');
                 if (hasEventsInWeek) {
                     weekMark.className = "week-label-cell";
-                    const weekIdx = (week % 4) + 1; // 假設渲染範疇內按順序循環，若需精確辨認建議由後端打標
-                    weekMark.innerHTML = `W${weekIdx}`;
+                    weekMark.innerHTML = `W${(week % 4) + 1}`;
                 }
                 container.appendChild(weekMark);
 
-                // 產生五日格子
                 for (let day = 0; day < 5; day++) {
                     const d = new Date(startMonday.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
                     const dateStr = toLocalISOString(d);
@@ -292,12 +289,12 @@
                     el.dataset.date = dateStr;
                     el.className = `day-cell ${isToday ? 'is-today-cell' : ''}`;
                     
-                    // 日期數字渲染 (今日使用藍色實心圓圈樣式)
+                    // 日期渲染
                     const dateNum = document.createElement('div');
                     if (isToday) {
-                        dateNum.className = "is-today-circle text-2xl";
+                        dateNum.className = "is-today-dot text-xl";
                     } else {
-                        dateNum.className = "text-slate-800 text-2xl font-black mb-4";
+                        dateNum.className = "text-slate-800 text-xl font-black mb-2";
                     }
                     dateNum.textContent = d.getDate();
                     el.appendChild(dateNum);
@@ -306,8 +303,10 @@
                         events.forEach(e => {
                             const info = parseEventTitle(e.title);
                             const eventDiv = document.createElement('div');
-                            eventDiv.className = `text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPast ? 'past-event' : ''}`;
-                            eventDiv.textContent = `${new Date(e.start).getHours()}h ${info.display}`;
+                            // 簡化內容：僅小時 + 簡稱
+                            const shortTitle = info.display.split('(')[0]; 
+                            eventDiv.className = `calendar-event-tag ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPast ? 'past-event' : ''}`;
+                            eventDiv.textContent = `${new Date(e.start).getHours()}h ${shortTitle}`;
                             el.appendChild(eventDiv);
                         });
                     }

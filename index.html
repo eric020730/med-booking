@@ -7,16 +7,16 @@
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 字體與按鈕整體放大，保持圓潤與美觀 */
+        /* 字體與按鈕整體放大 */
         .btn-main { @apply w-full py-5 rounded-[2rem] font-black transition-all active:scale-95 disabled:opacity-50 disabled:scale-100 shadow-sm text-xl; }
-        .btn-primary { @apply btn-main bg-blue-600 text-white shadow-blue-100; }
+        .btn-primary { @apply btn-main bg-blue-600 text-white shadow-blue-200; }
         .btn-secondary { @apply btn-main bg-slate-100 text-slate-600; }
         
         /* 五日制極致放大月曆格子 */
         .day-cell { @apply min-h-[140px] border border-slate-50 rounded-[2.5rem] p-3 flex flex-col items-center relative transition-all bg-white cursor-pointer; }
         
-        /* 1. 今日日期標示：藍色實心圓圈與淺藍背景 */
-        .is-today-dot { @apply bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg; }
+        /* 今日標示：藍色實心圓圈 */
+        .is-today-dot { @apply bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg mx-auto; }
         .is-today-cell { @apply bg-blue-50/50 border-blue-200 border-2; }
         
         .week-highlight { @apply ring-4 ring-blue-500/50 bg-blue-50 z-10 scale-105; }
@@ -27,7 +27,7 @@
         .my-event-text { color: #7e22ce !important; font-weight: 900 !important; }
         .my-event-btn { background-color: #9333ea !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(147, 51, 234, 0.2) !important; }
 
-        /* 2. 過去日期課程淡化樣式 */
+        /* 過去課程淡化樣式 */
         .past-event { opacity: 0.35; filter: grayscale(0.8); }
 
         ::-webkit-scrollbar { width: 0px; }
@@ -38,7 +38,7 @@
         <!-- 載入動畫 -->
         <div id="loading" class="fixed inset-0 bg-white/95 flex flex-col items-center justify-center z-50">
             <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600 mb-6"></div>
-            <p class="text-slate-600 font-black text-lg">讀取即時日曆中...</p>
+            <p class="text-slate-600 font-black text-lg">讀取雲端日曆中...</p>
         </div>
 
         <div id="page-content" class="hidden">
@@ -101,7 +101,7 @@
                         <div id="course-list" class="grid grid-cols-1 gap-3"></div>
                     </div>
 
-                    <!-- 月曆主體 (5 欄制：週一至週五) -->
+                    <!-- 月曆主體 (5 欄制) -->
                     <div id="calendar" class="grid grid-cols-5 gap-3 text-center"></div>
                     
                     <!-- 時段詳情 -->
@@ -125,11 +125,18 @@
     </div>
 
     <script>
-        // 請確保此處 URL 與部署後的 GAS 網址一致
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyu0c5Rmhrac2VzL8QV6Rq4IocF4FMI-9t0bDiHLMRLwWArKwTicMK40d4dXYRcfG_dbg/exec';
         const LIFF_ID = '2008853844-2zr8uzLz';
         
         let state = { userId: null, name: '', rawName: '', action: 'view', allEvents: [], course: null, selectedMonday: null, userCourses: [], selectedDate: null };
+
+        // 輔助函數：取得本地時間的 YYYY-MM-DD (修復時差位移問題)
+        function toLocalISOString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
         async function init() {
             try {
@@ -199,7 +206,7 @@
             const inst = document.getElementById('instruction-text');
             if (state.action === 'admin') { title.textContent = "排課管理"; badge.textContent = "管理員"; inst.textContent = "請點選週次"; }
             else if (state.action === 'book') { title.textContent = "預約課程"; badge.textContent = "預約模式"; document.getElementById('course-selector').classList.remove('hidden'); renderCourseButtons(); inst.textContent = "點選日期預約"; }
-            else if (state.action === 'modify') { title.textContent = "更動預預約"; badge.textContent = "修改模式"; inst.textContent = "點選紫色時段取消"; }
+            else if (state.action === 'modify') { title.textContent = "更動預約"; badge.textContent = "修改模式"; inst.textContent = "點選紫色時段取消"; }
             else { title.textContent = "全院課表"; badge.textContent = "查詢模式"; inst.textContent = "點擊日期查看詳情"; }
         }
 
@@ -209,14 +216,10 @@
             state.userCourses.forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = "p-5 border-2 border-slate-100 rounded-3xl text-base font-black transition-all text-slate-500 bg-slate-50 text-left flex justify-between items-center";
-                btn.innerHTML = `<span>授課主題：${c}</span> <span class="w-6 h-6 border-2 border-slate-200 rounded-full flex-shrink-0"></span>`;
+                btn.innerHTML = `<span>授課主題：${c}</span> <span class="w-6 h-6 border-2 border-slate-200 rounded-full"></span>`;
                 btn.onclick = () => {
                     state.course = c;
-                    container.querySelectorAll('button').forEach(b => { 
-                        b.classList.replace('border-blue-500', 'border-slate-100'); 
-                        b.classList.replace('text-blue-600', 'text-slate-500'); 
-                        b.querySelector('span:last-child').classList.remove('bg-blue-600','border-blue-600'); 
-                    });
+                    container.querySelectorAll('button').forEach(b => { b.classList.replace('border-blue-500', 'border-slate-100'); b.classList.replace('text-blue-600', 'text-slate-500'); b.querySelector('span:last-child').classList.remove('bg-blue-600','border-blue-600'); });
                     btn.classList.replace('border-slate-100', 'border-blue-500');
                     btn.classList.add('text-blue-600');
                     btn.querySelector('span:last-child').classList.add('bg-blue-600','border-blue-600');
@@ -252,8 +255,9 @@
 
             const today = new Date();
             today.setHours(0,0,0,0);
-            const todayTime = today.getTime();
+            const todayStr = toLocalISOString(today);
             
+            // 定位到本週週一
             const dayOfWeek = today.getDay();
             const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
             const startMonday = new Date(today.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
@@ -261,24 +265,33 @@
             for (let week = 0; week < 6; week++) {
                 for (let day = 0; day < 5; day++) {
                     const d = new Date(startMonday.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
-                    const dateStr = d.toISOString().split('T')[0];
-                    const events = state.allEvents.filter(e => e.start.startsWith(dateStr));
+                    const dateStr = toLocalISOString(d);
                     
-                    const isToday = (d.getTime() === todayTime);
-                    const isPast = (d.getTime() < todayTime);
+                    // 從 GAS 回傳的 ISO 格式（UTC）中進行日期比對，需轉為本地日期比對
+                    const events = state.allEvents.filter(e => {
+                        const eventDate = new Date(e.start);
+                        return toLocalISOString(eventDate) === dateStr;
+                    });
+                    
+                    const isToday = (dateStr === todayStr);
+                    const isPast = (d < today && !isToday);
 
                     const el = document.createElement('div');
                     el.dataset.date = dateStr;
                     el.className = `day-cell ${isToday ? 'is-today-cell' : ''}`;
                     
-                    // 日期數字標示 (今日實心藍圈)
-                    el.innerHTML = `<div class="mb-4 font-black ${isToday ? 'is-today-dot text-xl' : 'text-slate-800 text-2xl'}">${d.getDate()}</div>`;
+                    // 今日標示圓圈
+                    el.innerHTML = `<div class="mb-4 flex items-center justify-center">
+                        <div class="${isToday ? 'is-today-dot text-2xl font-black' : 'text-slate-800 text-2xl font-black'}">
+                            ${d.getDate()}
+                        </div>
+                    </div>`;
                     
                     if (events.length > 0) {
                         events.forEach(e => {
                             const info = parseEventTitle(e.title);
-                            const pastClass = isPast ? 'past-event' : '';
-                            el.innerHTML += `<div class="text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${pastClass}">${new Date(e.start).getHours()}h ${info.display}</div>`;
+                            const eventTime = new Date(e.start).getHours();
+                            el.innerHTML += `<div class="text-[9px] leading-tight rounded-lg px-2 py-1 mb-1 w-full truncate text-left font-bold ${info.isMine ? 'my-event-bg' : 'bg-blue-100 text-blue-700'} ${isPast ? 'past-event' : ''}">${eventTime}h ${info.display}</div>`;
                         });
                     }
                     el.onclick = () => handleDateClick(d, el, events);
@@ -313,7 +326,7 @@
         function showDayDetail(date, el, events) {
             document.querySelectorAll('.day-cell').forEach(d => d.classList.remove('ring-8', 'ring-blue-500/10', 'z-10', 'scale-105'));
             el.classList.add('ring-8', 'ring-blue-500/10', 'z-10', 'scale-105');
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = toLocalISOString(date);
             const detail = document.getElementById('day-detail');
             detail.classList.remove('hidden');
             document.getElementById('selected-date-text').textContent = dateStr + " (週" + ['日','一','二','三','四','五','六'][date.getDay()] + ")";
@@ -362,12 +375,12 @@
 
         async function adminBatchAction(type, tplIdx = null) {
             if (!state.selectedMonday) return;
-            const mondayStr = state.selectedMonday.toISOString().split('T')[0];
+            const mondayStr = toLocalISOString(state.selectedMonday);
             let url = `${GAS_URL}?action=`;
             if (type === 'four_weeks') { if (!confirm('確定連續套用 Week 1-4 模板？')) return; url += `batchSchedule&type=four_weeks&startDate=${mondayStr}`; }
             else if (type === 'delete_four') {
                 if (!confirm('將連續刪除四週日曆紀錄，確定？')) return;
-                const weeks = []; for(let i=0; i<4; i++) { let d = new Date(state.selectedMonday.getTime() + i*7*24*60*60*1000); weeks.push(d.toISOString().split('T')[0]); }
+                const weeks = []; for(let i=0; i<4; i++) { let d = new Date(state.selectedMonday.getTime() + i*7*24*60*60*1000); weeks.push(toLocalISOString(d)); }
                 url += `batchDelete&weeks=${weeks.join(',')}`;
             } else if (type === 'single') { url += `batchSchedule&type=single&startDate=${mondayStr}&templateIdx=${tplIdx}`; }
             else { if (!confirm('確定刪除該週所有紀錄？')) return; url += `batchDelete&weeks=${mondayStr}`; }
@@ -383,8 +396,11 @@
             document.getElementById('modal-success').classList.replace('flex', 'hidden');
             startLoad(); await refreshData(); renderCalendar();
             if (state.selectedDate) {
-                const dateStr = state.selectedDate.toISOString().split('T')[0];
-                const events = state.allEvents.filter(e => e.start.startsWith(dateStr));
+                const dateStr = toLocalISOString(state.selectedDate);
+                const events = state.allEvents.filter(e => {
+                    const eventDate = new Date(e.start);
+                    return toLocalISOString(eventDate) === dateStr;
+                });
                 const dayEl = document.querySelector(`.day-cell[data-date="${dateStr}"]`);
                 if (dayEl) showDayDetail(state.selectedDate, dayEl, events);
             }
